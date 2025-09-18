@@ -21,7 +21,7 @@
             position: relative;
             width: 100%;
             height: 100%;
-            cursor: none; /* Hide cursor during gameplay */
+            cursor: none;
         }
 
         /* --- Player Ball --- */
@@ -35,6 +35,7 @@
             box-shadow: 0 0 20px #00bfff, 0 0 30px #0077ff;
             pointer-events: none;
             z-index: 10;
+            will-change: left, top;
         }
 
         #ball.clicked {
@@ -52,6 +53,7 @@
             border-bottom: 30px solid #ff414d;
             filter: drop-shadow(0 0 8px rgba(255, 65, 77, 0.7));
             transform-origin: center 66%;
+            will-change: left, top, transform;
         }
 
         .enemy.big {
@@ -66,7 +68,7 @@
             border-bottom-width: 20px;
         }
 
-        /* --- Screens (Start/Game Over) --- */
+        /* --- Screens --- */
         .screen {
             position: absolute;
             top: 0;
@@ -209,6 +211,7 @@
     </div>
 
     <script>
+        // Game elements
         const gameContainer = document.getElementById('game-container');
         const ball = document.getElementById('ball');
         const startScreen = document.getElementById('start-screen');
@@ -222,6 +225,7 @@
         const highScoreDisplay = document.getElementById('high-score-display');
         const gameOverHighScoreDisplay = document.getElementById('game-over-high-score');
 
+        // Game state
         let gameState = 'start';
         let enemies = [];
         let animationFrameId;
@@ -230,41 +234,57 @@
         let difficulty = 3;
         let frameCount = 0;
 
+        // Player position
         let ballX = window.innerWidth / 2;
         let ballY = window.innerHeight / 2;
         let targetX = ballX;
         let targetY = ballY;
         const easingFactor = 0.1;
 
+        // Performance optimization
+        const MAX_ENEMIES = 100;
+        const enemyPool = [];
+        const COLLISION_DISTANCE_SQ = 625; // 25^2 (pre-calculated)
+
+        // Initialize
         window.addEventListener('mousemove', (e) => {
             targetX = e.clientX;
             targetY = e.clientY;
         });
         window.addEventListener('mousedown', () => ball.classList.add('clicked'));
         window.addEventListener('mouseup', () => ball.classList.remove('clicked'));
+        window.addEventListener('resize', handleResize);
 
         startButton.addEventListener('click', startGame);
         restartButton.addEventListener('click', startGame);
         menuButton.addEventListener('click', backToMenu);
 
+        // Load high score
         function loadHighScore() {
             const savedScore = localStorage.getItem('triangleDodgerHighScore');
             highScore = savedScore ? parseInt(savedScore, 10) : 0;
             highScoreDisplay.textContent = `High Score: ${highScore}`;
         }
 
+        // Handle window resize
+        function handleResize() {
+            if (gameState === 'playing') {
+                resetEnemies();
+            }
+        }
+
+        // Return to menu
         function backToMenu() {
             gameState = 'start';
             gameOverScreen.classList.add('hidden');
             startScreen.classList.remove('hidden');
         }
 
+        // Start new game
         function startGame() {
             gameState = 'playing';
             score = 0;
-            difficulty = parseInt(difficultyInput.value) || 3;
-            if (difficulty < 1) difficulty = 1;
-            if (difficulty > 10) difficulty = 10;
+            difficulty = Math.min(10, Math.max(1, parseInt(difficultyInput.value) || 3));
             difficultyInput.value = difficulty;
 
             scoreDisplay.textContent = `Score: 0`;
@@ -272,13 +292,8 @@
             startScreen.classList.add('hidden');
             gameOverScreen.classList.add('hidden');
             
-            enemies.forEach(enemy => enemy.element.remove());
-            enemies = [];
-
-            ballX = window.innerWidth / 2;
-            ballY = window.innerHeight / 2;
-            targetX = ballX;
-            targetY = ballY;
+            resetEnemies();
+            initializePlayer();
 
             if (animationFrameId) {
                 cancelAnimationFrame(animationFrameId);
@@ -286,9 +301,23 @@
             animationFrameId = requestAnimationFrame(gameLoop);
         }
 
+        // Reset enemies
+        function resetEnemies() {
+            enemies.forEach(enemy => enemy.element.remove());
+            enemies = [];
+            enemyPool.length = 0;
+        }
+
+        // Initialize player position
+        function initializePlayer() {
+            ballX = window.innerWidth / 2;
+            ballY = window.innerHeight / 2;
+            targetX = ballX;
+            targetY = ballY;
+        }
+
+        // End game
         function endGame() {
-            // This function is now only responsible for setting the state
-            // and updating the UI. The game loop will stop itself.
             gameState = 'gameOver';
             const finalScore = Math.floor(score);
             finalScoreDisplay.textContent = `Your Score: ${finalScore}`;
@@ -308,15 +337,41 @@
             gameOverScreen.classList.remove('hidden');
         }
 
+        // Get enemy from pool or create new
+        function getEnemyElement() {
+            return enemyPool.pop() || document.createElement('div');
+        }
+
+        // Return enemy to pool
+        function releaseEnemyElement(element) {
+            element.className = '';
+            element.style.cssText = '';
+            enemyPool.push(element);
+        }
+
+        // Spawn new enemy
         function spawnEnemy() {
+            if (enemies.length >= MAX_ENEMIES) return;
+
             const type = Math.random() < 0.3 ? 'big' : 'small';
-            const enemy = {
-                element: document.createElement('div'),
-                type, x: 0, y: 0, vx: 0, vy: 0,
-                rotation: 0, targetRotation: 0, turnSpeed: 0,
-            };
-            enemy.element.classList.add('enemy', type);
             const speedModifier = 1 + (difficulty - 1) * 0.1;
+            
+            const enemy = {
+                element: getEnemyElement(),
+                type,
+                x: 0,
+                y: 0,
+                vx: 0,
+                vy: 0,
+                rotation: 0,
+                targetRotation: 0,
+                turnSpeed: 0,
+                size: 0,
+                speed: 0,
+                followRadius: 0
+            };
+
+            enemy.element.classList.add('enemy', type);
 
             if (type === 'big') {
                 enemy.size = 60;
@@ -344,13 +399,18 @@
                 enemy.x = -enemy.size;
                 enemy.y = Math.random() * window.innerHeight;
             }
-            const initialAngleRad = Math.atan2(window.innerHeight / 2 - enemy.y, window.innerWidth / 2 - enemy.x);
+            
+            const initialAngleRad = Math.atan2(
+                window.innerHeight / 2 - enemy.y, 
+                window.innerWidth / 2 - enemy.x
+            );
             enemy.rotation = initialAngleRad * (180 / Math.PI) + 90;
             
             enemies.push(enemy);
             gameContainer.appendChild(enemy.element);
         }
 
+        // Update player position
         function updatePlayer() {
             const dx = targetX - ballX;
             const dy = targetY - ballY;
@@ -360,57 +420,81 @@
             ball.style.top = `${ballY}px`;
         }
         
+        // Update all enemies
         function updateEnemies() {
+            const ballRadiusSq = 225; // 15^2
+            
             for (let i = enemies.length - 1; i >= 0; i--) {
                 const enemy = enemies[i];
+                
+                // Calculate distance to player
                 const dx = ballX - enemy.x;
                 const dy = ballY - enemy.y;
-                const dist = Math.sqrt(dx * dx + dy * dy);
-                if (dist < enemy.followRadius) {
+                const distSq = dx * dx + dy * dy;
+                
+                // Follow player if within range
+                if (distSq < enemy.followRadius * enemy.followRadius) {
                     const angleRad = Math.atan2(dy, dx);
                     enemy.targetRotation = angleRad * (180 / Math.PI) + 90;
+                    
                     let angleDiff = enemy.targetRotation - enemy.rotation;
                     while (angleDiff > 180) angleDiff -= 360;
                     while (angleDiff < -180) angleDiff += 360;
+                    
                     if (Math.abs(angleDiff) < enemy.turnSpeed) {
                         enemy.rotation = enemy.targetRotation;
                     } else {
                         enemy.rotation += Math.sign(angleDiff) * enemy.turnSpeed;
                     }
                 }
+                
+                // Move enemy
                 const currentAngleRad = (enemy.rotation - 90) * (Math.PI / 180);
                 enemy.vx = Math.cos(currentAngleRad) * enemy.speed;
                 enemy.vy = Math.sin(currentAngleRad) * enemy.speed;
                 enemy.x += enemy.vx;
                 enemy.y += enemy.vy;
+                
+                // Update position and rotation
                 enemy.element.style.left = `${enemy.x}px`;
                 enemy.element.style.top = `${enemy.y}px`;
                 enemy.element.style.transform = `translate(-50%, -50%) rotate(${enemy.rotation}deg)`;
 
-                if (enemy.x < -enemy.size * 2 || enemy.x > window.innerWidth + enemy.size * 2 ||
-                    enemy.y < -enemy.size * 2 || enemy.y > window.innerHeight + enemy.size * 2) {
+                // Remove if off-screen
+                if (enemy.x < -enemy.size * 2 || 
+                    enemy.x > window.innerWidth + enemy.size * 2 ||
+                    enemy.y < -enemy.size * 2 || 
+                    enemy.y > window.innerHeight + enemy.size * 2) {
+                    
                     enemy.element.remove();
+                    releaseEnemyElement(enemy.element);
                     enemies.splice(i, 1);
                 }
             }
         }
         
+        // Check for collisions
         function checkCollisions() {
+            const ballRadiusSq = 225; // 15^2
+            
             for (const enemy of enemies) {
                 const dx = ballX - enemy.x;
                 const dy = ballY - enemy.y;
-                const distance = Math.sqrt(dx * dx + dy * dy);
-                const ballRadius = 15;
+                const distanceSq = dx * dx + dy * dy;
+                
                 const enemyRadius = enemy.size * 0.5;
-                if (distance < ballRadius + enemyRadius) {
+                const collisionDistanceSq = ballRadiusSq + (enemyRadius * enemyRadius) + 
+                                          (2 * 15 * enemyRadius);
+                
+                if (distanceSq < collisionDistanceSq) {
                     endGame();
-                    return; // Important: stop checking after one collision
+                    return;
                 }
             }
         }
 
+        // Main game loop
         function gameLoop() {
-            // The game loop now cleanly stops itself if the state is not 'playing'
             if (gameState !== 'playing') {
                 cancelAnimationFrame(animationFrameId);
                 return;
@@ -419,6 +503,7 @@
             score += 1/6;
             scoreDisplay.textContent = `Score: ${Math.floor(score)}`;
             frameCount++;
+            
             const spawnInterval = Math.max(15, 70 - difficulty * 5);
             if (frameCount % spawnInterval === 0) {
                 spawnEnemy();
@@ -426,17 +511,15 @@
 
             updatePlayer();
             updateEnemies();
-            checkCollisions(); // This might change gameState to 'gameOver'
+            checkCollisions();
             
-            // Re-check the state before requesting the next frame
             if (gameState === 'playing') {
                 animationFrameId = requestAnimationFrame(gameLoop);
             }
         }
 
-        // Initial Load
+        // Initial load
         loadHighScore();
     </script>
 </body>
 </html>
-

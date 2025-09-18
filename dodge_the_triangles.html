@@ -230,8 +230,8 @@
         let enemies = [];
         let animationFrameId;
         let score = 0;
-        let highScore = 0;
-        let difficulty = 3;
+        let highScores = {}; // Object to store high scores for each difficulty
+        let currentDifficulty = 3;
         let frameCount = 0;
 
         // Player position
@@ -259,11 +259,26 @@
         restartButton.addEventListener('click', startGame);
         menuButton.addEventListener('click', backToMenu);
 
-        // Load high score
-        function loadHighScore() {
-            const savedScore = localStorage.getItem('triangleDodgerHighScore');
-            highScore = savedScore ? parseInt(savedScore, 10) : 0;
-            highScoreDisplay.textContent = `High Score: ${highScore}`;
+        // Load high scores
+        function loadHighScores() {
+            const savedScores = localStorage.getItem('triangleDodgerHighScores');
+            highScores = savedScores ? JSON.parse(savedScores) : {};
+            updateHighScoreDisplay();
+        }
+
+        // Save high scores
+        function saveHighScores() {
+            localStorage.setItem('triangleDodgerHighScores', JSON.stringify(highScores));
+        }
+
+        // Get high score for current difficulty
+        function getCurrentHighScore() {
+            return highScores[currentDifficulty] || 0;
+        }
+
+        // Update high score display
+        function updateHighScoreDisplay() {
+            highScoreDisplay.textContent = `High Score (Difficulty ${currentDifficulty}): ${getCurrentHighScore()}`;
         }
 
         // Handle window resize
@@ -278,14 +293,16 @@
             gameState = 'start';
             gameOverScreen.classList.add('hidden');
             startScreen.classList.remove('hidden');
+            currentDifficulty = parseInt(difficultyInput.value) || 3;
+            updateHighScoreDisplay();
         }
 
         // Start new game
         function startGame() {
             gameState = 'playing';
             score = 0;
-            difficulty = Math.min(10, Math.max(1, parseInt(difficultyInput.value) || 3));
-            difficultyInput.value = difficulty;
+            currentDifficulty = Math.min(10, Math.max(1, parseInt(difficultyInput.value) || 3));
+            difficultyInput.value = currentDifficulty;
 
             scoreDisplay.textContent = `Score: 0`;
             scoreDisplay.classList.remove('hidden');
@@ -323,16 +340,18 @@
             finalScoreDisplay.textContent = `Your Score: ${finalScore}`;
             gameOverHighScoreDisplay.classList.remove('new');
 
-            if (finalScore > highScore) {
-                highScore = finalScore;
-                localStorage.setItem('triangleDodgerHighScore', highScore.toString());
-                gameOverHighScoreDisplay.textContent = `New High Score: ${highScore}!`;
+            // Check and update high score for current difficulty
+            const currentHighScore = getCurrentHighScore();
+            if (finalScore > currentHighScore) {
+                highScores[currentDifficulty] = finalScore;
+                saveHighScores();
+                gameOverHighScoreDisplay.textContent = `New High Score: ${finalScore}!`;
                 gameOverHighScoreDisplay.classList.add('new');
             } else {
-                gameOverHighScoreDisplay.textContent = `High Score: ${highScore}`;
+                gameOverHighScoreDisplay.textContent = `High Score: ${currentHighScore}`;
             }
 
-            highScoreDisplay.textContent = `High Score: ${highScore}`;
+            updateHighScoreDisplay();
             scoreDisplay.classList.add('hidden');
             gameOverScreen.classList.remove('hidden');
         }
@@ -354,7 +373,7 @@
             if (enemies.length >= MAX_ENEMIES) return;
 
             const type = Math.random() < 0.3 ? 'big' : 'small';
-            const speedModifier = 1 + (difficulty - 1) * 0.1;
+            const speedModifier = 1 + (currentDifficulty - 1) * 0.1;
             
             const enemy = {
                 element: getEnemyElement(),
@@ -504,7 +523,7 @@
             scoreDisplay.textContent = `Score: ${Math.floor(score)}`;
             frameCount++;
             
-            const spawnInterval = Math.max(15, 70 - difficulty * 5);
+            const spawnInterval = Math.max(15, 70 - currentDifficulty * 5);
             if (frameCount % spawnInterval === 0) {
                 spawnEnemy();
             }
@@ -518,8 +537,14 @@
             }
         }
 
+        // Update high score display when difficulty changes
+        difficultyInput.addEventListener('change', () => {
+            currentDifficulty = Math.min(10, Math.max(1, parseInt(difficultyInput.value) || 3));
+            updateHighScoreDisplay();
+        });
+
         // Initial load
-        loadHighScore();
+        loadHighScores();
     </script>
 </body>
 </html>

@@ -244,7 +244,8 @@
         // Performance optimization
         const MAX_ENEMIES = 100;
         const enemyPool = [];
-        const COLLISION_DISTANCE_SQ = 625; // 25^2 (pre-calculated)
+        // The COLLISION_DISTANCE_SQ constant is no longer needed with the new collision logic
+        // const COLLISION_DISTANCE_SQ = 625; // 25^2 (pre-calculated)
 
         // Initialize
         window.addEventListener('mousemove', (e) => {
@@ -311,6 +312,7 @@
             
             resetEnemies();
             initializePlayer();
+            initializeEnemyPool(); // Create the enemy pool at the start
 
             if (animationFrameId) {
                 cancelAnimationFrame(animationFrameId);
@@ -320,9 +322,12 @@
 
         // Reset enemies
         function resetEnemies() {
-            enemies.forEach(enemy => enemy.element.remove());
+            // Instead of removing, we just hide all active enemies and return them to the pool
+            enemies.forEach(enemy => {
+                enemy.element.style.display = 'none';
+                enemyPool.push(enemy.element);
+            });
             enemies = [];
-            enemyPool.length = 0;
         }
 
         // Initialize player position
@@ -331,6 +336,17 @@
             ballY = window.innerHeight / 2;
             targetX = ballX;
             targetY = ballY;
+        }
+
+        // Create a pool of enemy elements at the start of the game
+        function initializeEnemyPool() {
+            if (enemyPool.length > 0) return; // Pool already created
+            for (let i = 0; i < MAX_ENEMIES; i++) {
+                const enemyElement = document.createElement('div');
+                enemyElement.style.display = 'none'; // Start hidden
+                gameContainer.appendChild(enemyElement);
+                enemyPool.push(enemyElement);
+            }
         }
 
         // End game
@@ -358,25 +374,33 @@
 
         // Get enemy from pool or create new
         function getEnemyElement() {
-            return enemyPool.pop() || document.createElement('div');
+            // If the pool is empty, we don't spawn an enemy to prevent errors
+            if (enemyPool.length === 0) return null;
+            const element = enemyPool.pop();
+            element.style.display = 'block'; // Make it visible
+            return element;
         }
 
         // Return enemy to pool
         function releaseEnemyElement(element) {
-            element.className = '';
-            element.style.cssText = '';
+            // Instead of complex cleanup, just hide it and add it back to the pool
+            element.style.display = 'none';
             enemyPool.push(element);
         }
 
         // Spawn new enemy
         function spawnEnemy() {
-            if (enemies.length >= MAX_ENEMIES) return;
+            // We only spawn if there are available enemies in the pool.
+            if (enemyPool.length === 0) return;
+
+            const element = getEnemyElement();
+            if (!element) return; // Extra safety check
 
             const type = Math.random() < 0.3 ? 'big' : 'small';
             const speedModifier = 1 + (currentDifficulty - 1) * 0.1;
             
             const enemy = {
-                element: getEnemyElement(),
+                element: element,
                 type,
                 x: 0,
                 y: 0,
@@ -485,8 +509,7 @@
                     enemy.y < -enemy.size * 2 || 
                     enemy.y > window.innerHeight + enemy.size * 2) {
                     
-                    enemy.element.remove();
-                    releaseEnemyElement(enemy.element);
+                    releaseEnemyElement(enemy.element); // Return to the pool instead of removing
                     enemies.splice(i, 1);
                 }
             }
@@ -502,8 +525,7 @@
                 const distanceSq = dx * dx + dy * dy;
                 
                 const enemyRadius = enemy.size * 0.5;
-                const collisionDistanceSq = ballRadiusSq + (enemyRadius * enemyRadius) + 
-                                          (2 * 15 * enemyRadius);
+                const collisionDistanceSq = (15 + enemyRadius) * (15 + enemyRadius); // Simplified and more accurate collision
                 
                 if (distanceSq < collisionDistanceSq) {
                     endGame();
@@ -548,3 +570,4 @@
     </script>
 </body>
 </html>
+

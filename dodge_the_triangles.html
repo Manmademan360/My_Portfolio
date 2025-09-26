@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Dodge the Triangles</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  body,html{margin:0;padding:0;overflow:hidden;height:100%;font-family:'Poppins',sans-serif;background:#121212;color:#f0f0f0}
+  #game-container{position:relative;width:100%;height:100%;cursor:none}
+  #ball{position:absolute;width:30px;height:30px;border-radius:50%;
+    background:radial-gradient(circle,#00bfff 0%,#0077ff 100%);box-shadow:0 0 20px #00bfff,0 0 30px #0077ff;
+    pointer-events:none;z-index:10;will-change:transform}
+  /* clicked visual handled in JS (scale) so we do not override translate in CSS */
+  #ball.clicked{box-shadow:0 0 10px #00bfff}
+  .enemy{position:absolute;width:0;height:0;border-left:15px solid transparent;border-right:15px solid transparent;border-bottom:30px solid #ff414d;
+    filter:drop-shadow(0 0 8px rgba(255,65,77,.7));transform-origin:center 66%;will-change:transform}
+  .enemy.big{border-left-width:30px;border-right-width:30px;border-bottom-width:60px}
+  .enemy.small{border-left-width:10px;border-right-width:10px;border-bottom-width:20px}
+  .screen{position:absolute;inset:0;background:rgba(18,18,18,.95);display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;z-index:20}
+  .screen.hidden{display:none}
+  .screen h1{font-size:4rem;margin-bottom:1rem}
+  .screen p{font-size:1.2rem;color:#aaa;margin-bottom:2rem}
+  #high-score-display,#game-over-high-score{font-size:1.5rem;margin-top:-1rem;margin-bottom:2rem}
+  #game-over-high-score.new{color:#ffd700;animation:new-score-pulse 1s infinite}
+  @keyframes new-score-pulse{0%{transform:scale(1)}50%{transform:scale(1.05)}100%{transform:scale(1)}}
+  .screen .button-container{display:flex;gap:1rem;margin-top:1rem}
+  .screen .difficulty-container{margin-bottom:2rem;display:flex;align-items:center;gap:1rem}
+  .screen input[type="number"]{width:80px;padding:.5rem;font-size:1.2rem;background:#333;border:1px solid #555;color:#f0f0f0;border-radius:8px;text-align:center}
+  .screen button{padding:1rem 2rem;font-size:1.5rem;background:linear-gradient(45deg,#0077ff,#00bfff);border:none;border-radius:12px;color:white;cursor:pointer;transition:.2s;box-shadow:0 4px 15px rgba(0,150,255,.4)}
+  .screen button.btn-secondary{background:#4a5568;box-shadow:0 4px 15px rgba(0,0,0,.4)}
+  .screen button:hover{transform:translateY(-3px);box-shadow:0 8px 25px rgba(0,150,255,.6)}
+  .screen button.btn-secondary:hover{background:#5a6578;box-shadow:0 8px 25px rgba(0,0,0,.5)}
+  #score-display{position:absolute;top:20px;left:20px;font-size:2rem;z-index:5;color:rgba(255,255,255,.8)}
+</style>
+</head>
+<body>
+<div id="game-container">
+  <div id="ball"></div>
+  <div id="score-display">Score: 0</div>
+
+  <div id="start-screen" class="screen">
+    <h1>Dodge the Triangles</h1>
+    <p>Move your mouse to control the ball. Avoid the red enemies!</p>
+    <p id="high-score-display">High Score: 0</p>
+    <div class="difficulty-container">
+      <label for="difficulty">Difficulty (1-10):</label>
+      <input type="number" id="difficulty" value="3" min="1" max="10">
+    </div>
+    <button id="start-button">Start Game</button>
+  </div>
+
+  <div id="game-over-screen" class="screen hidden">
+    <h1>Game Over</h1>
+    <p id="final-score">Your Score: 0</p>
+    <p id="game-over-high-score">High Score: 0</p>
+    <div class="button-container">
+      <button id="restart-button">Play Again</button>
+      <button id="menu-button" class="btn-secondary">Back to Menu</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* --- Constants --- */
+const BALL_RADIUS = 15;
+const BALL_RADIUS_SQ = BALL_RADIUS * BALL_RADIUS;
+const MAX_ENEMIES = 100;
+
+/* --- DOM --- */
+const gameContainer = document.getElementById('game-container');
+const ball = document.getElementById('ball');
+const startScreen = document.getElementById('start-screen');
+const gameOverScreen = document.getElementById('game-over-screen');
+const startButton = document.getElementById('start-button');
+const restartButton = document.getElementById('restart-button');
+const menuButton = document.getElementById('menu-button');
+const difficultyInput = document.getElementById('difficulty');
+const scoreDisplay = document.getElementById('score-display');
+const finalScoreDisplay = document.getElementById('final-score');
+const highScoreDisplay = document.getElementById('high-score-display');
+const gameOverHighScoreDisplay = document.getElementById('game-over-high-score');
+
+/* --- State --- */
+let gameState = 'start'; // 'start' | 'playing' | 'gameOver'
+let enemies = [];
+let enemyPool = [];
+let animationFrameId = null;
+let score = 0;
+let displayedScore = 0;
+let highScores = {};
+let currentDifficulty = 3;
+let frameCount = 0;
+
+/* --- Player position --- */
+let ballX = window.innerWidth / 2;
+let ballY = window.innerHeight / 2;
+let targetX = ballX;
+let targetY = ballY;
+const easingFactor = 0.1;
+
+/* --- Utilities & pooling --- */
+function clampDifficulty(val) {
+  return Math.min(10, Math.max(1, parseInt(val) || 3));
+}
+function loadHighScores() {
+  const saved = localStorage.getItem('triangleDodgerHighScores');
+  highScores = saved ? JSON.parse(saved) : {};
+  updateHighScoreDisplay();
+}
+function saveHighScores() {
+  localStorage.setItem('triangleDodgerHighScores', JSON.stringify(highScores));
+}
+function getCurrentHighScore() {
+  return highScores[currentDifficulty] || 0;
+}
+function updateHighScoreDisplay() {
+  highScoreDisplay.textContent = `High Score (Difficulty ${currentDifficulty}): ${getCurrentHighScore()}`;
+}
+
+function getEnemy() {
+  let obj = enemyPool.pop();
+  if (!obj) {
+    const el = document.createElement('div');
+    gameContainer.appendChild(el);
+    obj = { element: el };
+  }
+  obj.element.style.display = '';
+  return obj;
+}
+function resetEnemies() {
+  // hide active enemies and move them into the pool
+  for (const e of enemies) {
+    e.element.style.display = 'none';
+    enemyPool.push(e);
+  }
+  enemies.length = 0;
+}
+
+/* --- New resetGame() function (place it with utilities) --- */
+function centerBall() {
+  ballX = window.innerWidth / 2;
+  ballY = window.innerHeight / 2;
+  targetX = ballX;
+  targetY = ballY;
+  // apply transform immediately so ball is visually centered on menus
+  const scale = ball.classList.contains('clicked') ? 0.8 : 1;
+  ball.style.transform = `translate(${ballX - BALL_RADIUS}px,${ballY - BALL_RADIUS}px) scale(${scale})`;
+}
+function resetGame() {
+  // central reset used at start of a new run
+  resetEnemies();
+  score = 0;
+  displayedScore = 0;
+  frameCount = 0;
+  centerBall();
+  scoreDisplay.textContent = `Score: 0`;
+  // ensure clicked state cleared
+  ball.classList.remove('clicked');
+}
+
+/* --- Spawn logic --- */
+function spawnEnemy() {
+  if (enemies.length >= MAX_ENEMIES) return;
+  const type = Math.random() < 0.3 ? 'big' : 'small';
+  const speedMod = 1 + (currentDifficulty - 1) * 0.1;
+
+  const e = getEnemy();
+  const el = e.element;
+  el.className = `enemy ${type}`;
+
+  if (type === 'big') {
+    e.size = 60;
+    e.speed = (Math.random() * 1.5 + 0.5) * speedMod;
+    e.followRadius = 180;
+    e.turnSpeed = 1.5;
+  } else {
+    e.size = 20;
+    e.speed = (Math.random() * 1.5 + 1) * speedMod;
+    e.followRadius = 280;
+    e.turnSpeed = 3.5;
+  }
+
+  // precompute collision radius squared (ball vs enemy)
+  e.collisionDistSq = (BALL_RADIUS + e.size / 2) * (BALL_RADIUS + e.size / 2);
+
+  const side = Math.floor(Math.random() * 4);
+  if (side === 0) { e.x = Math.random() * window.innerWidth; e.y = -e.size; }
+  else if (side === 1) { e.x = window.innerWidth + e.size; e.y = Math.random() * window.innerHeight; }
+  else if (side === 2) { e.x = Math.random() * window.innerWidth; e.y = window.innerHeight + e.size; }
+  else { e.x = -e.size; e.y = Math.random() * window.innerHeight; }
+
+  const ang = Math.atan2(window.innerHeight / 2 - e.y, window.innerWidth / 2 - e.x);
+  e.rotation = ang * 180 / Math.PI + 90;
+
+  enemies.push(e);
+}
+
+/* --- Player update (single transform + scale from clicked) --- */
+function updatePlayer() {
+  ballX += (targetX - ballX) * easingFactor;
+  ballY += (targetY - ballY) * easingFactor;
+  const scale = ball.classList.contains('clicked') ? 0.8 : 1;
+  ball.style.transform = `translate(${ballX - BALL_RADIUS}px,${ballY - BALL_RADIUS}px) scale(${scale})`;
+}
+
+/* --- Enemies update (single transform) --- */
+function updateEnemies() {
+  for (let i = enemies.length - 1; i >= 0; i--) {
+    const e = enemies[i];
+    const dx = ballX - e.x;
+    const dy = ballY - e.y;
+    const distSq = dx * dx + dy * dy;
+
+    if (distSq < e.followRadius * e.followRadius) {
+      const angleRad = Math.atan2(dy, dx);
+      e.targetRot = angleRad * 180 / Math.PI + 90;
+      let diff = e.targetRot - e.rotation;
+      while (diff > 180) diff -= 360;
+      while (diff < -180) diff += 360;
+      e.rotation += Math.abs(diff) < e.turnSpeed ? diff : Math.sign(diff) * e.turnSpeed;
+    }
+
+    const ang = (e.rotation - 90) * Math.PI / 180;
+    e.x += Math.cos(ang) * e.speed;
+    e.y += Math.sin(ang) * e.speed;
+
+    e.element.style.transform = `translate(${e.x}px,${e.y}px) rotate(${e.rotation}deg)`;
+
+    if (e.x < -e.size * 2 || e.x > window.innerWidth + e.size * 2 || e.y < -e.size * 2 || e.y > window.innerHeight + e.size * 2) {
+      e.element.style.display = 'none';
+      enemies.splice(i, 1);
+      enemyPool.push(e);
+    }
+  }
+}
+
+/* --- Collision check using precomputed distances --- */
+function checkCollisions() {
+  const hitboxShrink = 8; // how much smaller the hitbox is compared to the ball’s radius
+  const adjustedRadius = ballRadius - hitboxShrink;
+  const adjustedRadiusSq = adjustedRadius * adjustedRadius;
+
+  for (const e of enemies) {
+    const dx = ballX - e.x;
+    const dy = ballY - e.y;
+
+    // compare against enemy + smaller player radius
+    if (dx * dx + dy * dy < e.collisionDistSq + adjustedRadiusSq) {
+      endGame();
+      return;
+    }
+  }
+}
+
+
+/* --- Game loop --- */
+function gameLoop() {
+  if (gameState !== 'playing') {
+    cancelAnimationFrame(animationFrameId);
+    return;
+  }
+
+  score += 1 / 6;
+  const intScore = Math.floor(score);
+  if (intScore !== displayedScore) {
+    displayedScore = intScore;
+    scoreDisplay.textContent = `Score: ${intScore}`;
+  }
+
+  frameCount++;
+  const spawnInt = Math.max(15, 70 - currentDifficulty * 5);
+  if (frameCount % spawnInt === 0) spawnEnemy();
+
+  updatePlayer();
+  updateEnemies();
+  checkCollisions();
+
+  if (gameState === 'playing') animationFrameId = requestAnimationFrame(gameLoop);
+}
+
+/* --- Start / End / Menu handlers --- */
+function startGame() {
+  // reset and begin
+  currentDifficulty = clampDifficulty(difficultyInput.value);
+  difficultyInput.value = currentDifficulty;
+  resetGame();
+  gameState = 'playing';
+  startScreen.classList.add('hidden');
+  gameOverScreen.classList.add('hidden');
+  scoreDisplay.classList.remove('hidden');
+
+  if (animationFrameId) cancelAnimationFrame(animationFrameId);
+  animationFrameId = requestAnimationFrame(gameLoop);
+}
+
+function endGame() {
+  gameState = 'gameOver';
+  const finalScore = Math.floor(score);
+  finalScoreDisplay.textContent = `Your Score: ${finalScore}`;
+  gameOverHighScoreDisplay.classList.remove('new');
+
+  const currentHigh = getCurrentHighScore();
+  if (finalScore > currentHigh) {
+    highScores[currentDifficulty] = finalScore;
+    saveHighScores();
+    gameOverHighScoreDisplay.textContent = `New High Score: ${finalScore}!`;
+    gameOverHighScoreDisplay.classList.add('new');
+  } else {
+    gameOverHighScoreDisplay.textContent = `High Score: ${currentHigh}`;
+  }
+
+  updateHighScoreDisplay();
+  scoreDisplay.classList.add('hidden');
+  gameOverScreen.classList.remove('hidden');
+
+  // center ball and clear clicked so menus look stable
+  centerBall();
+  ball.classList.remove('clicked');
+}
+
+function backToMenu() {
+  gameState = 'start';
+  gameOverScreen.classList.add('hidden');
+  startScreen.classList.remove('hidden');
+  currentDifficulty = clampDifficulty(difficultyInput.value);
+  updateHighScoreDisplay();
+  centerBall();
+  ball.classList.remove('clicked');
+}
+
+/* --- Input handlers --- */
+/* Only update target coordinates while playing. This prevents the ball from following the mouse in menus. */
+window.addEventListener('mousemove', (e) => {
+  if (gameState !== 'playing') return;
+  targetX = e.clientX;
+  targetY = e.clientY;
+});
+window.addEventListener('mousedown', () => {
+  if (gameState === 'playing') ball.classList.add('clicked');
+});
+window.addEventListener('mouseup', () => {
+  ball.classList.remove('clicked');
+});
+window.addEventListener('resize', () => {
+  // maintain center on menus and reset enemies mid-game to avoid odd positions
+  if (gameState === 'playing') {
+    resetEnemies();
+  } else {
+    centerBall();
+  }
+});
+
+/* --- UI hooks --- */
+startButton.addEventListener('click', startGame);
+restartButton.addEventListener('click', startGame);
+menuButton.addEventListener('click', backToMenu);
+difficultyInput.addEventListener('change', () => {
+  currentDifficulty = clampDifficulty(difficultyInput.value);
+  updateHighScoreDisplay();
+});
+
+/* --- Init --- */
+loadHighScores();
+centerBall();
+</script>
+</body>
+</html>

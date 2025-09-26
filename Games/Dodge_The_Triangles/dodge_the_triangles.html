@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dodge the Triangles</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div id="game-container">
+        <div id="ball"></div>
+        <div id="score-display">Score: 0</div>
+
+        <div id="start-screen" class="screen">
+            <h1>Dodge the Triangles</h1>
+            <p>Move your mouse to control the ball. Avoid the red enemies!</p>
+            <p id="high-score-display">High Score: 0</p>
+            <div class="difficulty-container">
+                <label for="difficulty">Difficulty (1-10):</label>
+                <input type="number" id="difficulty" value="3" min="1" max="10">
+            </div>
+            <button id="start-button">Start Game</button>
+        </div>
+
+        <div id="game-over-screen" class="screen hidden">
+            <h1>Game Over</h1>
+            <p id="final-score">Your Score: 0</p>
+            <p id="game-over-high-score">High Score: 0</p>
+            <div class="button-container">
+                <button id="restart-button">Play Again</button>
+                <button id="menu-button" class="btn-secondary">Back to Menu</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
+

@@ -1,0 +1,175 @@
+/* --- Base Setup --- */
+body, html {
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    height: 100%;
+    font-family: 'Poppins', sans-serif;
+    background-color: #121212;
+    color: #f0f0f0;
+}
+
+#game-container {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    cursor: none;
+}
+
+/* --- Player Ball --- */
+#ball {
+    position: absolute;
+    width: 30px;
+    height: 30px;
+    background: radial-gradient(circle, #00bfff 0%, #0077ff 100%);
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    box-shadow: 0 0 20px #00bfff, 0 0 30px #0077ff;
+    pointer-events: none;
+    z-index: 10;
+    will-change: left, top;
+}
+
+#ball.clicked {
+    transform: translate(-50%, -50%) scale(0.8);
+    box-shadow: 0 0 10px #00bfff;
+}
+
+/* --- Enemies --- */
+.enemy {
+    position: absolute;
+    width: 0;
+    height: 0;
+    border-left: 15px solid transparent;
+    border-right: 15px solid transparent;
+    border-bottom: 30px solid #ff414d;
+    filter: drop-shadow(0 0 8px rgba(255, 65, 77, 0.7));
+    transform-origin: center 66%;
+    will-change: left, top, transform;
+}
+
+.enemy.big {
+    border-left-width: 30px;
+    border-right-width: 30px;
+    border-bottom-width: 60px;
+}
+
+.enemy.small {
+    border-left-width: 10px;
+    border-right-width: 10px;
+    border-bottom-width: 20px;
+}
+
+/* --- Screens --- */
+.screen {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(18, 18, 18, 0.95);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    z-index: 20;
+    cursor: default;
+}
+
+.screen.hidden {
+    display: none;
+}
+
+.screen h1 {
+    font-size: 4rem;
+    margin-bottom: 1rem;
+}
+
+.screen p {
+    font-size: 1.2rem;
+    color: #aaa;
+    margin-bottom: 2rem;
+}
+
+#high-score-display, #game-over-high-score {
+    font-size: 1.5rem;
+    color: #f0f0f0;
+    margin-top: -1rem;
+    margin-bottom: 2rem;
+}
+
+#game-over-high-score.new {
+    color: #ffd700;
+    animation: new-score-pulse 1s infinite;
+}
+
+@keyframes new-score-pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+    100% { transform: scale(1); }
+}
+
+.screen .button-container {
+    display: flex;
+    gap: 1rem;
+    margin-top: 1rem;
+}
+
+.screen .difficulty-container {
+    margin-bottom: 2rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.screen label {
+    font-size: 1.2rem;
+}
+
+.screen input[type="number"] {
+    width: 80px;
+    padding: 0.5rem;
+    font-size: 1.2rem;
+    background-color: #333;
+    border: 1px solid #555;
+    color: #f0f0f0;
+    border-radius: 8px;
+    text-align: center;
+}
+
+.screen button {
+    padding: 1rem 2rem;
+    font-size: 1.5rem;
+    background: linear-gradient(45deg, #0077ff, #00bfff);
+    border: none;
+    border-radius: 12px;
+    color: white;
+    cursor: pointer;
+    transition: all 0.2s ease-in-out;
+    box-shadow: 0 4px 15px rgba(0, 150, 255, 0.4);
+}
+
+.screen button.btn-secondary {
+    background: #4a5568;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+}
+
+.screen button:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 25px rgba(0, 150, 255, 0.6);
+}
+
+.screen button.btn-secondary:hover {
+    background: #5a6578;
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.5);
+}
+
+#score-display {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    font-size: 2rem;
+    z-index: 5;
+    color: rgba(255, 255, 255, 0.8);
+}

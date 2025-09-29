@@ -319,9 +319,7 @@ function checkCollisions() {
 }
 
 // Main game loop
-function gameLoop() {
-    console.time('Frame Calculation'); // START the timer
-    
+function gameLoop() {    
     if (gameState !== 'playing') {
         cancelAnimationFrame(animationFrameId);
         return;
@@ -344,7 +342,6 @@ function gameLoop() {
         animationFrameId = requestAnimationFrame(gameLoop);
     }
     
-    console.timeEnd('Frame Calculation'); // END the timer and log the result
 }
 
 // Update high score display when difficulty changes

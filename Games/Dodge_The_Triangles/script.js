@@ -285,8 +285,8 @@ function updateEnemies() {
         enemy.y += enemy.vy;
         
         // Update position and rotation
-        enemy.element.style.transform = `translate(${enemy.x}px, ${enemy.y}px) rotate(${enemy.rotation}deg)`;
-
+        enemy.element.style.transform = `translate(${enemy.x}px, ${enemy.y}px) translate(-50%, -50%) rotate(${enemy.rotation}deg)`;
+        
         // Remove if off-screen
         if (enemy.x < -enemy.size * 2 || 
             enemy.x > window.innerWidth + enemy.size * 2 ||

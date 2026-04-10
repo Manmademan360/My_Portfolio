@@ -1,6 +1,6 @@
-// Game elements
-const gameContainer = document.getElementById('game-container');
-const ball = document.getElementById('ball');
+// ---------- DOM Elements ----------
+const canvas = document.getElementById('game-canvas');
+const ctx = canvas.getContext('2d');
 const startScreen = document.getElementById('start-screen');
 const gameOverScreen = document.getElementById('game-over-screen');
 const startButton = document.getElementById('start-button');
@@ -12,71 +12,89 @@ const finalScoreDisplay = document.getElementById('final-score');
 const highScoreDisplay = document.getElementById('high-score-display');
 const gameOverHighScoreDisplay = document.getElementById('game-over-high-score');
 
-// Game states
+// ---------- Game State ----------
 let gameState = 'start';
 let enemies = [];
-let animationFrameId;
+let animationFrameId = null;
 let score = 0;
-let highScores = {}; // Object to store high scores for each difficulty
+let highScores = {};
 let currentDifficulty = 3;
 let frameCount = 0;
 
-// Player position
+// Player
 let ballX = window.innerWidth / 2;
 let ballY = window.innerHeight / 2;
 let targetX = ballX;
 let targetY = ballY;
-const easingFactor = 0.1;
+const BALL_RADIUS = 15;
+const EASING = 0.1;
 
-// Performance optimization
-const MAX_ENEMIES = 100;
-const enemyPool = [];
-// The COLLISION_DISTANCE_SQ constant is no longer needed with the new collision logic
-// const COLLISION_DISTANCE_SQ = 625; // 25^2 (pre-calculated)
+// Click effect
+let isMouseDown = false;
 
-// Initialize
+// Canvas dimensions
+let canvasWidth = window.innerWidth;
+let canvasHeight = window.innerHeight;
+
+// ---------- Canvas Resize ----------
+function resizeCanvas() {
+    canvasWidth = window.innerWidth;
+    canvasHeight = window.innerHeight;
+    canvas.width = canvasWidth;
+    canvas.height = canvasHeight;
+    if (gameState === 'playing') {
+        ballX = Math.min(canvasWidth - BALL_RADIUS, Math.max(BALL_RADIUS, ballX));
+        ballY = Math.min(canvasHeight - BALL_RADIUS, Math.max(BALL_RADIUS, ballY));
+        targetX = ballX;
+        targetY = ballY;
+    }
+}
+window.addEventListener('resize', resizeCanvas);
+resizeCanvas();
+
+// ---------- Mouse Tracking ----------
 window.addEventListener('mousemove', (e) => {
     targetX = e.clientX;
     targetY = e.clientY;
 });
-window.addEventListener('mousedown', () => ball.classList.add('clicked'));
-window.addEventListener('mouseup', () => ball.classList.remove('clicked'));
-window.addEventListener('resize', handleResize);
+window.addEventListener('mousedown', () => isMouseDown = true);
+window.addEventListener('mouseup', () => isMouseDown = false);
 
-startButton.addEventListener('click', startGame);
-restartButton.addEventListener('click', startGame);
-menuButton.addEventListener('click', backToMenu);
-
-// Load high scores
+// ---------- High Scores (unchanged) ----------
 function loadHighScores() {
-    const savedScores = localStorage.getItem('triangleDodgerHighScores');
-    highScores = savedScores ? JSON.parse(savedScores) : {};
+    const saved = localStorage.getItem('triangleDodgerHighScores');
+    highScores = saved ? JSON.parse(saved) : {};
     updateHighScoreDisplay();
 }
-
-// Save high scores
 function saveHighScores() {
     localStorage.setItem('triangleDodgerHighScores', JSON.stringify(highScores));
 }
-
-// Get high score for current difficulty
 function getCurrentHighScore() {
     return highScores[currentDifficulty] || 0;
 }
-
-// Update high score display
 function updateHighScoreDisplay() {
     highScoreDisplay.textContent = `High Score (Difficulty ${currentDifficulty}): ${getCurrentHighScore()}`;
 }
 
-// Handle window resize
-function handleResize() {
-    if (gameState === 'playing') {
-        resetEnemies();
-    }
+// ---------- Game Flow ----------
+function startGame() {
+    gameState = 'playing';
+    score = 0;
+    currentDifficulty = Math.min(10, Math.max(1, parseInt(difficultyInput.value) || 3));
+    difficultyInput.value = currentDifficulty;
+    
+    scoreDisplay.textContent = 'Score: 0';
+    scoreDisplay.classList.remove('hidden');
+    startScreen.classList.add('hidden');
+    gameOverScreen.classList.add('hidden');
+    
+    resetEnemies();
+    initializePlayer();
+    
+    if (animationFrameId) cancelAnimationFrame(animationFrameId);
+    animationFrameId = requestAnimationFrame(gameLoop);
 }
 
-// Return to menu
 function backToMenu() {
     gameState = 'start';
     gameOverScreen.classList.add('hidden');
@@ -85,205 +103,131 @@ function backToMenu() {
     updateHighScoreDisplay();
 }
 
-// Start new game
-function startGame() {
-    gameState = 'playing';
-    score = 0;
-    currentDifficulty = Math.min(10, Math.max(1, parseInt(difficultyInput.value) || 3));
-    difficultyInput.value = currentDifficulty;
-
-    scoreDisplay.textContent = `Score: 0`;
-    scoreDisplay.classList.remove('hidden');
-    startScreen.classList.add('hidden');
-    gameOverScreen.classList.add('hidden');
-    
-    resetEnemies();
-    initializePlayer();
-    initializeEnemyPool(); // Create the enemy pool at the start
-
-    if (animationFrameId) {
-        cancelAnimationFrame(animationFrameId);
-    }
-    animationFrameId = requestAnimationFrame(gameLoop);
-}
-
-// Reset enemies
-function resetEnemies() {
-    // Instead of removing, we just hide all active enemies and return them to the pool
-    enemies.forEach(enemy => {
-        enemy.element.style.display = 'none';
-        enemyPool.push(enemy.element);
-    });
-    enemies = [];
-}
-
-// Initialize player position
-function initializePlayer() {
-    ballX = window.innerWidth / 2;
-    ballY = window.innerHeight / 2;
-    targetX = ballX;
-    targetY = ballY;
-}
-
-// Create a pool of enemy elements at the start of the game
-function initializeEnemyPool() {
-    if (enemyPool.length > 0) return; // Pool already created
-    for (let i = 0; i < MAX_ENEMIES; i++) {
-        const enemyElement = document.createElement('div');
-        enemyElement.style.display = 'none'; // Start hidden
-        gameContainer.appendChild(enemyElement);
-        enemyPool.push(enemyElement);
-    }
-}
-
-// End game
 function endGame() {
     gameState = 'gameOver';
     const finalScore = Math.floor(score);
     finalScoreDisplay.textContent = `Your Score: ${finalScore}`;
     gameOverHighScoreDisplay.classList.remove('new');
-
-    // Check and update high score for current difficulty
-    const currentHighScore = getCurrentHighScore();
-    if (finalScore > currentHighScore) {
+    
+    const currentHigh = getCurrentHighScore();
+    if (finalScore > currentHigh) {
         highScores[currentDifficulty] = finalScore;
         saveHighScores();
         gameOverHighScoreDisplay.textContent = `New High Score: ${finalScore}!`;
         gameOverHighScoreDisplay.classList.add('new');
     } else {
-        gameOverHighScoreDisplay.textContent = `High Score: ${currentHighScore}`;
+        gameOverHighScoreDisplay.textContent = `High Score: ${currentHigh}`;
     }
-
+    
     updateHighScoreDisplay();
     scoreDisplay.classList.add('hidden');
     gameOverScreen.classList.remove('hidden');
 }
 
-// Get enemy from pool or create new
-function getEnemyElement() {
-    // If the pool is empty, we don't spawn an enemy to prevent errors
-    if (enemyPool.length === 0) return null;
-    const element = enemyPool.pop();
-    element.style.display = 'block'; // Make it visible
-    return element;
+function initializePlayer() {
+    ballX = canvasWidth / 2;
+    ballY = canvasHeight / 2;
+    targetX = ballX;
+    targetY = ballY;
 }
 
-// Return enemy to pool
-function releaseEnemyElement(element) {
-    // Instead of complex cleanup, just hide it and add it back to the pool
-    element.style.display = 'none';
-    enemyPool.push(element);
+function resetEnemies() {
+    enemies = [];
 }
 
-// Spawn new enemy
+// ---------- Enemy Spawning ----------
 function spawnEnemy() {
-    // We only spawn if there are available enemies in the pool.
-    if (enemyPool.length === 0) return;
-
-    const element = getEnemyElement();
-    if (!element) return; // Extra safety check
-
     const type = Math.random() < 0.3 ? 'big' : 'small';
-    const speedModifier = 1 + ((currentDifficulty + 2) - 1) * 0.1;
+    const speedModifier = 1 + (currentDifficulty + 2 - 1) * 0.1;
     
-    const enemy = {
-        element: element,
-        type,
-        x: 0,
-        y: 0,
-        vx: 0,
-        vy: 0,
-        rotation: 0,
-        targetRotation: 0,
-        turnSpeed: 0,
-        size: 0,
-        speed: 0,
-        followRadius: 0
-    };
-
-    enemy.element.className = ''; // Reset classes
-    enemy.element.classList.add('enemy', type);
-
+    let size, speed, followRadius, turnSpeed;
     if (type === 'big') {
-        enemy.size = 60;
-        enemy.speed = (Math.random() * 1.5 + 0.5) * speedModifier;
-        enemy.followRadius = 180;
-        enemy.turnSpeed = 1.5;
+        size = 60;
+        speed = (Math.random() * 1.5 + 0.5) * speedModifier;
+        followRadius = 180;
+        turnSpeed = 1.5;
     } else {
-        enemy.size = 20;
-        enemy.speed = (Math.random() * 1.5 + 1) * speedModifier;
-        enemy.followRadius = 280;
-        enemy.turnSpeed = 3.5;
+        size = 20;
+        speed = (Math.random() * 1.5 + 1) * speedModifier;
+        followRadius = 280;
+        turnSpeed = 3.5;
     }
     
     const side = Math.floor(Math.random() * 4);
+    let x, y;
+    const padding = size;
     if (side === 0) {
-        enemy.x = Math.random() * window.innerWidth;
-        enemy.y = -enemy.size;
+        x = Math.random() * canvasWidth;
+        y = -padding;
     } else if (side === 1) {
-        enemy.x = window.innerWidth + enemy.size;
-        enemy.y = Math.random() * window.innerHeight;
+        x = canvasWidth + padding;
+        y = Math.random() * canvasHeight;
     } else if (side === 2) {
-        enemy.x = Math.random() * window.innerWidth;
-        enemy.y = window.innerHeight + enemy.size;
+        x = Math.random() * canvasWidth;
+        y = canvasHeight + padding;
     } else {
-        enemy.x = -enemy.size;
-        enemy.y = Math.random() * window.innerHeight;
+        x = -padding;
+        y = Math.random() * canvasHeight;
     }
     
-    const initialAngleRad = Math.atan2(
-        window.innerHeight / 2 - enemy.y, 
-        window.innerWidth / 2 - enemy.x
-    );
-    enemy.rotation = initialAngleRad * (180 / Math.PI) + 90;
+    const initialAngleRad = Math.atan2(canvasHeight/2 - y, canvasWidth/2 - x);
+    const rotation = initialAngleRad * (180 / Math.PI) + 90;
     
-    enemies.push(enemy);
-    // We don't need to appendChild here anymore as it's already in the DOM
+    enemies.push({
+        type,
+        x, y,
+        vx: 0, vy: 0,
+        rotation,
+        targetRotation: rotation,
+        turnSpeed,
+        size,
+        speed,
+        followRadius,
+        collisionRadius: size * 0.6
+    });
 }
 
-// Update player position
+// ---------- Update Logic ----------
 function updatePlayer() {
     const dx = targetX - ballX;
     const dy = targetY - ballY;
-    ballX += dx * easingFactor;
-    ballY += dy * easingFactor;
-    ball.style.left = `${ballX}px`;
-    ball.style.top = `${ballY}px`;
+    ballX += dx * EASING;
+    ballY += dy * EASING;
+    
+    ballX = Math.min(canvasWidth - BALL_RADIUS, Math.max(BALL_RADIUS, ballX));
+    ballY = Math.min(canvasHeight - BALL_RADIUS, Math.max(BALL_RADIUS, ballY));
 }
 
-// Update all enemies
 function updateEnemies() {
     for (let i = enemies.length - 1; i >= 0; i--) {
-        const enemy = enemies[i];
+        const e = enemies[i];
         
-        // Calculate distance to player
-        const dx = ballX - enemy.x;
-        const dy = ballY - enemy.y;
-        const distSq = dx * dx + dy * dy;
+        const dx = ballX - e.x;
+        const dy = ballY - e.y;
+        const distSq = dx*dx + dy*dy;
         
-        // Follow player if within range
-        if (distSq < enemy.followRadius * enemy.followRadius) {
+        if (distSq < e.followRadius * e.followRadius) {
             const angleRad = Math.atan2(dy, dx);
-            enemy.targetRotation = angleRad * (180 / Math.PI) + 90;
+            e.targetRotation = angleRad * (180 / Math.PI) + 90;
             
-            let angleDiff = enemy.targetRotation - enemy.rotation;
+            let angleDiff = e.targetRotation - e.rotation;
             while (angleDiff > 180) angleDiff -= 360;
             while (angleDiff < -180) angleDiff += 360;
             
-            if (Math.abs(angleDiff) < enemy.turnSpeed) {
-                enemy.rotation = enemy.targetRotation;
+            if (Math.abs(angleDiff) < e.turnSpeed) {
+                e.rotation = e.targetRotation;
             } else {
-                enemy.rotation += Math.sign(angleDiff) * enemy.turnSpeed;
+                e.rotation += Math.sign(angleDiff) * e.turnSpeed;
             }
         }
         
-        // Move enemy
-        const currentAngleRad = (enemy.rotation - 90) * (Math.PI / 180);
-        enemy.vx = Math.cos(currentAngleRad) * enemy.speed;
-        enemy.vy = Math.sin(currentAngleRad) * enemy.speed;
-        enemy.x += enemy.vx;
-        enemy.y += enemy.vy;
+        const angleRad = (e.rotation - 90) * (Math.PI / 180);
+        e.vx = Math.cos(angleRad) * e.speed;
+        e.vy = Math.sin(angleRad) * e.speed;
+        e.x += e.vx;
+        e.y += e.vy;
         
+<<<<<<< Updated upstream
         // Update position and rotation
         enemy.element.style.transform = `translate(${enemy.x}px, ${enemy.y}px) translate(-50%, -50%) rotate(${enemy.rotation}deg)`;
         
@@ -294,35 +238,122 @@ function updateEnemies() {
             enemy.y > window.innerHeight + enemy.size * 2) {
             
             releaseEnemyElement(enemy.element); // Return to the pool instead of removing
+=======
+        const margin = e.size * 2;
+        if (e.x < -margin || e.x > canvasWidth + margin || 
+            e.y < -margin || e.y > canvasHeight + margin) {
+>>>>>>> Stashed changes
             enemies.splice(i, 1);
         }
     }
 }
 
-// Check for collisions
 function checkCollisions() {
-    for (const enemy of enemies) {
-        const dx = ballX - enemy.x;
-        const dy = ballY - enemy.y;
-        const distanceSq = dx * dx + dy * dy;
-        
-        const enemyRadius = enemy.size * 0.5;
-        const collisionDistanceSq = (15 + enemyRadius) * (15 + enemyRadius); // Simplified and more accurate collision
-        
-        if (distanceSq < collisionDistanceSq) {
+    for (const e of enemies) {
+        const dx = ballX - e.x;
+        const dy = ballY - e.y;
+        const dist = Math.sqrt(dx*dx + dy*dy);
+        if (dist < BALL_RADIUS + e.collisionRadius) {
             endGame();
-            return;
+            return true;
         }
     }
+    return false;
 }
 
-// Main game loop
-function gameLoop() {    
-    if (gameState !== 'playing') {
-        cancelAnimationFrame(animationFrameId);
-        return;
+// ---------- Rendering (Exact CSS Replication) ----------
+function draw() {
+    ctx.clearRect(0, 0, canvasWidth, canvasHeight);
+    
+    // ----- Draw Enemies (Triangles with drop-shadow and exact colors) -----
+    for (const e of enemies) {
+        ctx.save();
+        ctx.translate(e.x, e.y);
+        ctx.rotate(e.rotation * Math.PI / 180);
+        
+        const half = e.size / 2;
+        
+        // Triangle path (pointing up)
+        ctx.beginPath();
+        ctx.moveTo(0, -half);
+        ctx.lineTo(-half * 0.8, half * 0.6);
+        ctx.lineTo(half * 0.8, half * 0.6);
+        ctx.closePath();
+        
+        // Drop shadow filter simulation (CSS: filter: drop-shadow(0 0 8px rgba(255,65,77,0.7)))
+        ctx.shadowColor = 'rgba(255, 65, 77, 0.7)';
+        ctx.shadowBlur = 8;
+        ctx.shadowOffsetX = 0;
+        ctx.shadowOffsetY = 0;
+        
+        // Fill color: big = #ff414d, small = #ffaa00 (as per CSS)
+        ctx.fillStyle = e.type === 'big' ? '#ff414d' : '#ffaa00';
+        ctx.fill();
+        
+        // Remove shadow for stroke to match CSS (CSS doesn't have stroke, but we add a subtle one for clarity)
+        ctx.shadowBlur = 0;
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+        
+        // Eye (white with black pupil)
+        ctx.beginPath();
+        ctx.arc(0, -half * 0.2, e.size * 0.1, 0, Math.PI * 2);
+        ctx.fillStyle = '#ffffff';
+        ctx.fill();
+        ctx.fillStyle = '#000000';
+        ctx.beginPath();
+        ctx.arc(0, -half * 0.2, e.size * 0.05, 0, Math.PI * 2);
+        ctx.fill();
+        
+        ctx.restore();
     }
+    
+    // ----- Draw Player Ball (Exact CSS radial gradient + box-shadow) -----
+    ctx.save();
+    ctx.translate(ballX, ballY);
+    
+    // Apply click scaling
+    const scale = isMouseDown ? 0.8 : 1.0;
+    ctx.scale(scale, scale);
+    
+    // Outer glow (CSS: box-shadow: 0 0 20px #00bfff, 0 0 30px #0077ff)
+    ctx.shadowColor = '#00bfff';
+    ctx.shadowBlur = 20;
+    ctx.shadowOffsetX = 0;
+    ctx.shadowOffsetY = 0;
+    
+    // Create radial gradient matching CSS: radial-gradient(circle, #00bfff 0%, #0077ff 100%)
+    const gradient = ctx.createRadialGradient(-5, -5, 2, 0, 0, BALL_RADIUS);
+    gradient.addColorStop(0, '#00bfff');
+    gradient.addColorStop(1, '#0077ff');
+    
+    ctx.beginPath();
+    ctx.arc(0, 0, BALL_RADIUS, 0, Math.PI * 2);
+    ctx.fillStyle = gradient;
+    ctx.fill();
+    
+    // Second shadow layer (CSS has two shadows, we simulate with a second fill with different blur)
+    ctx.shadowColor = '#0077ff';
+    ctx.shadowBlur = 30;
+    ctx.fill();
+    
+    // Remove shadow for crisp edge
+    ctx.shadowBlur = 0;
+    
+    // Inner highlight (simulate the 3D sphere look from the original)
+    ctx.beginPath();
+    ctx.arc(-3, -3, 5, 0, Math.PI * 2);
+    ctx.fillStyle = '#88ddff';
+    ctx.fill();
+    
+    ctx.restore();
+}
 
+// ---------- Game Loop ----------
+function gameLoop() {
+    if (gameState !== 'playing') return;
+    
     score += 1/6;
     scoreDisplay.textContent = `Score: ${Math.floor(score)}`;
     frameCount++;
@@ -331,18 +362,22 @@ function gameLoop() {
     if (frameCount % spawnInterval === 0) {
         spawnEnemy();
     }
-
+    
     updatePlayer();
     updateEnemies();
-    checkCollisions();
+    const collision = checkCollisions();
     
-    if (gameState === 'playing') {
+    draw();
+    
+    if (!collision) {
         animationFrameId = requestAnimationFrame(gameLoop);
     }
-    
 }
 
-// Update high score display when difficulty changes
+// ---------- Event Listeners ----------
+startButton.addEventListener('click', startGame);
+restartButton.addEventListener('click', startGame);
+menuButton.addEventListener('click', backToMenu);
 difficultyInput.addEventListener('change', () => {
     currentDifficulty = Math.min(10, Math.max(1, parseInt(difficultyInput.value) || 3));
     updateHighScoreDisplay();

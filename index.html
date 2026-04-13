@@ -1,39 +1,67 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dodge the Triangles</title>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="styles.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width">
+  <title>Yannick Wierzbowski Portfolio</title>
+  <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <div id="game-container">
-        <div id="ball"></div>
-        <div id="score-display">Score: 0</div>
+  <header>
+    <h1>Yannick<br><span>Wierzbowski</span></h1>
+    <p>Projects, games, and experiments — built and shared.</p>
+    <nav>
+      <a href="#about">About</a>
+      <a href="#projects">Projects</a>
+      <a href="#contact">Contact</a>
+    </nav>
+  </header>
 
-        <div id="start-screen" class="screen">
-            <h1>Dodge the Triangles</h1>
-            <p>Move your mouse to control the ball. Avoid the red enemies!</p>
-            <p id="high-score-display">High Score: 0</p>
-            <div class="difficulty-container">
-                <label for="difficulty">Difficulty (1-10):</label>
-                <input type="number" id="difficulty" value="3" min="1" max="10">
-            </div>
-            <button id="start-button">Start Game</button>
-        </div>
+  <section id="about">
+    <div class="section-label">About</div>
+    <h2>Who I Am</h2>
+    <p>Hello, I'm <strong>Yannick</strong>. This is where I keep my projects from my CS classes as well as some personal projects.</p>
+  </section>
 
-        <div id="game-over-screen" class="screen hidden">
-            <h1>Game Over</h1>
-            <p id="final-score">Your Score: 0</p>
-            <p id="game-over-high-score">High Score: 0</p>
-            <div class="button-container">
-                <button id="restart-button">Play Again</button>
-                <button id="menu-button" class="btn-secondary">Back to Menu</button>
-            </div>
-        </div>
+  <section id="projects">
+    <div class="section-label">Work</div>
+    <h2>Projects</h2>
+    <div class="projects">
+      <div class="card">
+        <div class="card-index">01 / Game</div>
+        <h3>Dodge the Triangles</h3>
+        <p>A web game where you dodge triangles that chase you using your mouse.</p>
+        <a href="https://manmademan360.github.io/My_Portfolio/dodge_the_triangles.html" class="play-button">Launch Game</a>
+      </div>
+      <div class="card">
+        <div class="card-index">02 / Project</div>
+        <h3>Base Converter</h3>
+        <p>A simple base converter that allows you to convert numbers between different numeral systems. (Decimal, Binary, and Hexadecimal)</p>
+      </div>
+      <div class="card">
+        <div class="card-index">03 / Project</div>
+        <h3>Kingpin</h3>
+        <p>A comprehensive website for managing multiple bowling teams and their information for easier usage.</p>
+        <a href="https://nathan-jeong.github.io/KingPin/index.html" class="play-button">Go to Website</a>
+      </div>
+      <div class="card">
+        <div class="card-index">04 / Project</div>
+        <h3>Arduino Binary Game</h3>
+        <p>A simple game built with an Arduino that teaches binary number systems.</p>
+      </div>
     </div>
+  </section>
 
-    <script src="script.js"></script>
+  <section id="contact">
+    <div class="section-label">Get in Touch</div>
+    <h2>Contact</h2>
+    <p>You can reach me at: <a href="mailto:yannick@example.com">yannick@example.com</a></p>
+  </section>
+
+  <footer>
+    <p>&copy; 2026 Yannick. All rights reserved.</p>
+  </footer>
+
+  <script src="script.js"></script>
 </body>
 </html>

@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Base Converter</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;600&family=Syne:wght@700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f5f0e8;
+    --card: #faf7f2;
+    --ink: #1a1610;
+    --ink-mid: #6b6356;
+    --ink-light: #b8b0a4;
+    --rule: #ddd8ce;
+    --dec-accent: #c0392b;
+    --bin-accent: #1a5276;
+    --hex-accent: #1e7a4a;
+    --dec-bg: #fdf3f2;
+    --bin-bg: #f2f6fb;
+    --hex-bg: #f2fbf5;
+    --shadow: rgba(26,22,16,0.08);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    font-family: 'IBM Plex Mono', monospace;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    background-image:
+      radial-gradient(circle at 15% 85%, rgba(192,57,43,0.04) 0%, transparent 45%),
+      radial-gradient(circle at 85% 15%, rgba(26,82,118,0.05) 0%, transparent 45%),
+      radial-gradient(circle at 50% 50%, rgba(30,122,74,0.03) 0%, transparent 60%);
+  }
+
+  .card {
+    width: 100%;
+    max-width: 460px;
+    background: var(--card);
+    border-radius: 2px;
+    box-shadow:
+      0 2px 4px var(--shadow),
+      0 8px 32px var(--shadow),
+      0 0 0 1px var(--rule);
+    overflow: hidden;
+  }
+
+  .card-header {
+    padding: 22px 28px 18px;
+    border-bottom: 1px solid var(--rule);
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+  }
+
+  .card-header h1 {
+    font-family: 'Syne', sans-serif;
+    font-size: 18px;
+    font-weight: 800;
+    color: var(--ink);
+    letter-spacing: -0.02em;
+  }
+
+  .card-header .bases {
+    font-size: 10px;
+    color: var(--ink-light);
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+  }
+
+  .fields {
+    padding: 20px 28px 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+
+  .field {
+    position: relative;
+  }
+
+  .field + .field {
+    border-top: 1px solid var(--rule);
+  }
+
+  .field-inner {
+    display: flex;
+    align-items: stretch;
+    gap: 0;
+    transition: background 0.15s;
+    border-radius: 1px;
+  }
+
+  .field-inner:focus-within {
+    background: white;
+    box-shadow: 0 1px 0 currentColor;
+  }
+
+  .field-tag {
+    width: 42px;
+    min-width: 42px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Syne', sans-serif;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+    padding: 16px 0 14px;
+    border-right: 1px solid var(--rule);
+  }
+
+  .field.dec .field-tag { color: var(--dec-accent); }
+  .field.bin .field-tag { color: var(--bin-accent); }
+  .field.hex .field-tag { color: var(--hex-accent); }
+
+  .field-input-wrap {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    padding: 0 14px;
+    position: relative;
+  }
+
+  input {
+    width: 100%;
+    background: transparent;
+    border: none;
+    outline: none;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 16px;
+    font-weight: 400;
+    color: var(--ink);
+    padding: 16px 0 14px;
+    letter-spacing: 0.04em;
+  }
+
+  input::placeholder {
+    color: var(--ink-light);
+    font-weight: 300;
+  }
+
+  .field.dec input { caret-color: var(--dec-accent); }
+  .field.bin input { caret-color: var(--bin-accent); letter-spacing: 0.12em; }
+  .field.hex input { caret-color: var(--hex-accent); text-transform: uppercase; }
+
+  .field-clear {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0 4px;
+    color: var(--ink-light);
+    font-size: 14px;
+    line-height: 1;
+    opacity: 0;
+    transition: opacity 0.15s, color 0.15s;
+    font-family: 'IBM Plex Mono', monospace;
+  }
+
+  .field-clear:hover { color: var(--ink); }
+  .field-input-wrap:focus-within .field-clear,
+  input:not(:placeholder-shown) ~ .field-clear {
+    opacity: 1;
+  }
+
+  .field.error input {
+    color: #c0392b;
+  }
+
+  .error-msg {
+    font-size: 9px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: #c0392b;
+    padding: 0 14px 10px 56px;
+    display: none;
+  }
+
+  .field.error .error-msg { display: block; }
+
+  /* Arrow connectors */
+  .arrow {
+    display: flex;
+    align-items: center;
+    padding: 0 0 0 48px;
+    height: 0;
+    overflow: visible;
+    position: relative;
+    z-index: 2;
+  }
+
+  .arrow-line {
+    width: 24px;
+    height: 1px;
+    background: var(--ink-light);
+    position: relative;
+  }
+
+  /* Bottom row */
+  .card-footer {
+    padding: 14px 28px 18px;
+    border-top: 1px solid var(--rule);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .hint {
+    font-size: 9px;
+    color: var(--ink-light);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  .clear-all {
+    background: none;
+    border: 1px solid var(--rule);
+    border-radius: 2px;
+    padding: 6px 14px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--ink-mid);
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .clear-all:hover {
+    border-color: var(--ink-mid);
+    color: var(--ink);
+  }
+
+  /* Active field highlight strip */
+  .field.active-field::before {
+    content: '';
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 2px;
+  }
+
+  .field.dec.active-field::before { background: var(--dec-accent); }
+  .field.bin.active-field::before { background: var(--bin-accent); }
+  .field.hex.active-field::before { background: var(--hex-accent); }
+
+  /* Filled field subtle bg */
+  .field.filled.dec .field-inner { background: var(--dec-bg); }
+  .field.filled.bin .field-inner { background: var(--bin-bg); }
+  .field.filled.hex .field-inner { background: var(--hex-bg); }
+
+  /* Cascade animation on conversion */
+  @keyframes flash-in {
+    0% { opacity: 0.3; transform: translateX(-4px); }
+    100% { opacity: 1; transform: translateX(0); }
+  }
+
+  input.updated {
+    animation: flash-in 0.18s ease-out forwards;
+  }
+</style>
+</head>
+<body>
+
+<div class="card">
+  <div class="card-header">
+    <h1>Base Converter</h1>
+    <span class="bases">DEC · BIN · HEX</span>
+  </div>
+
+  <div class="fields">
+
+    <!-- DECIMAL -->
+    <div class="field dec" id="field-dec">
+      <div class="field-inner">
+        <div class="field-tag">DEC</div>
+        <div class="field-input-wrap">
+          <input id="dec" type="text" inputmode="numeric" placeholder="0–4294967295" autocomplete="off" spellcheck="false">
+          <button class="field-clear" onclick="clearField('dec')" tabindex="-1">×</button>
+        </div>
+      </div>
+      <div class="error-msg" id="err-dec">integers only</div>
+    </div>
+
+    <!-- BINARY -->
+    <div class="field bin" id="field-bin">
+      <div class="field-inner">
+        <div class="field-tag">BIN</div>
+        <div class="field-input-wrap">
+          <input id="bin" type="text" inputmode="text" placeholder="0s and 1s" autocomplete="off" spellcheck="false">
+          <button class="field-clear" onclick="clearField('bin')" tabindex="-1">×</button>
+        </div>
+      </div>
+      <div class="error-msg" id="err-bin">binary digits only</div>
+    </div>
+
+    <!-- HEX -->
+    <div class="field hex" id="field-hex">
+      <div class="field-inner">
+        <div class="field-tag">HEX</div>
+        <div class="field-input-wrap">
+          <input id="hex" type="text" inputmode="text" placeholder="0–9, A–F" autocomplete="off" spellcheck="false">
+          <button class="field-clear" onclick="clearField('hex')" tabindex="-1">×</button>
+        </div>
+      </div>
+      <div class="error-msg" id="err-hex">hex digits only (0–9, A–F)</div>
+    </div>
+
+  </div>
+
+  <div class="card-footer">
+    <span class="hint">type in any field</span>
+    <button class="clear-all" onclick="clearAll()">Clear all</button>
+  </div>
+</div>
+
+<script>
+  const decEl = document.getElementById('dec');
+  const binEl = document.getElementById('bin');
+  const hexEl = document.getElementById('hex');
+
+  const fields = {
+    dec: { input: decEl, field: document.getElementById('field-dec'), err: document.getElementById('err-dec') },
+    bin: { input: binEl, field: document.getElementById('field-bin'), err: document.getElementById('err-bin') },
+    hex: { input: hexEl, field: document.getElementById('field-hex'), err: document.getElementById('err-hex') },
+  };
+
+  let activeSource = null;
+
+  function animateIn(el) {
+    el.classList.remove('updated');
+    void el.offsetWidth; // reflow
+    el.classList.add('updated');
+  }
+
+  function setError(name, hasError) {
+    const f = fields[name];
+    f.field.classList.toggle('error', hasError);
+  }
+
+  function updateFilledState(name) {
+    const f = fields[name];
+    f.field.classList.toggle('filled', f.input.value.length > 0);
+  }
+
+  function convert(source, value) {
+    // Clear errors on all
+    Object.keys(fields).forEach(k => setError(k, false));
+
+    if (!value || value === '') {
+      // Clear others
+      Object.keys(fields).forEach(k => {
+        if (k !== source) {
+          fields[k].input.value = '';
+          updateFilledState(k);
+        }
+      });
+      return;
+    }
+
+    let num;
+
+    if (source === 'dec') {
+      if (!/^\d+$/.test(value)) { setError('dec', true); return; }
+      num = parseInt(value, 10);
+    } else if (source === 'bin') {
+      if (!/^[01]+$/.test(value)) { setError('bin', true); return; }
+      num = parseInt(value, 2);
+    } else if (source === 'hex') {
+      if (!/^[0-9a-fA-F]+$/.test(value)) { setError('hex', true); return; }
+      num = parseInt(value, 16);
+    }
+
+    if (isNaN(num) || num < 0 || num > 4294967295) {
+      setError(source, true);
+      Object.keys(fields).forEach(k => {
+        if (k !== source) { fields[k].input.value = ''; updateFilledState(k); }
+      });
+      return;
+    }
+
+    const results = {
+      dec: num.toString(10),
+      bin: num.toString(2),
+      hex: num.toString(16).toUpperCase(),
+    };
+
+    Object.keys(fields).forEach(k => {
+      if (k !== source) {
+        fields[k].input.value = results[k];
+        animateIn(fields[k].input);
+        updateFilledState(k);
+      }
+    });
+  }
+
+  // Wire up events
+  Object.keys(fields).forEach(name => {
+    const { input, field } = fields[name];
+
+    input.addEventListener('focus', () => {
+      activeSource = name;
+      Object.keys(fields).forEach(k => fields[k].field.classList.toggle('active-field', k === name));
+    });
+
+    input.addEventListener('blur', () => {
+      field.classList.remove('active-field');
+    });
+
+    input.addEventListener('input', () => {
+      updateFilledState(name);
+      convert(name, input.value.trim());
+    });
+
+    // Force uppercase on hex as you type
+    if (name === 'hex') {
+      input.addEventListener('input', () => {
+        const pos = input.selectionStart;
+        input.value = input.value.toUpperCase();
+        input.setSelectionRange(pos, pos);
+      });
+    }
+  });
+
+  function clearField(name) {
+    fields[name].input.value = '';
+    setError(name, false);
+    updateFilledState(name);
+    convert(name, '');
+    fields[name].input.focus();
+  }
+
+  function clearAll() {
+    Object.keys(fields).forEach(k => {
+      fields[k].input.value = '';
+      setError(k, false);
+      updateFilledState(k);
+    });
+  }
+</script>
+</body>
+</html>

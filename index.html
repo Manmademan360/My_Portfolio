@@ -1,55 +1,39 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width">
-  <title>Yannick Portfolio</title>
-  <link rel="stylesheet" href="styles.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dodge the Triangles</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <header>
-    <h1>Welcome to Yannick's Portfolio!</h1>
-    <p>This is my test portfolio page for my projects and games.</p>
-    <nav>
-      <a href="#about">About</a>
-      <a href="#projects">Projects</a>
-      <a href="#contact">Contact</a>
-    </nav>
-  </header>
+    <div id="game-container">
+        <div id="ball"></div>
+        <div id="score-display">Score: 0</div>
 
-  <section id="about">
-    <h2>About Me</h2>
-    <p>Hello, I’m Yannick. I create projects and games and share them here. Have fun looking around!</p>
-  </section>
+        <div id="start-screen" class="screen">
+            <h1>Dodge the Triangles</h1>
+            <p>Move your mouse to control the ball. Avoid the red enemies!</p>
+            <p id="high-score-display">High Score: 0</p>
+            <div class="difficulty-container">
+                <label for="difficulty">Difficulty (1-10):</label>
+                <input type="number" id="difficulty" value="3" min="1" max="10">
+            </div>
+            <button id="start-button">Start Game</button>
+        </div>
 
-  <section id="projects">
-    <h2>Projects</h2>
-    <div class="projects">
-      <div class="card">
-        <h3>Dodge the Triangles</h3>
-        <p>I've been experimenting with making games using Artificial Inteligence, and this is a web game that I have been working on.</p>
-        <a href="https://manmademan360.github.io/My_Portfolio/dodge_the_triangles.html" class="play-button">PLAY HERE</a>
-      </div>
-      <div class="card">
-        <h3>Project 2</h3>
-        <p>Description of your second project. Explain what you built and why.</p>
-      </div>
-      <div class="card">
-        <h3>Project 3</h3>
-        <p>Description of your third project. Add links, images, or demos if available.</p>
-      </div>
+        <div id="game-over-screen" class="screen hidden">
+            <h1>Game Over</h1>
+            <p id="final-score">Your Score: 0</p>
+            <p id="game-over-high-score">High Score: 0</p>
+            <div class="button-container">
+                <button id="restart-button">Play Again</button>
+                <button id="menu-button" class="btn-secondary">Back to Menu</button>
+            </div>
+        </div>
     </div>
-  </section>
 
-  <section id="contact">
-    <h2>Contact</h2>
-    <p>You can reach me at: <a href="mailto:yannick@example.com">yannick@example.com</a></p>
-  </section>
-
-  <footer>
-    <p>&copy; 2025 Yannick. All rights reserved.</p>
-  </footer>
-
-  <script src="script.js"></script>
+    <script src="script.js"></script>
 </body>
 </html>

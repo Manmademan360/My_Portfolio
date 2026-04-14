@@ -1,0 +1,649 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Binary Game</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0a;
+    --surface: #111111;
+    --surface-2: #1a1a1a;
+    --border: #2a2a2a;
+    --text: #e8e4dc;
+    --text-muted: #6b6762;
+    --accent: #f0603c;
+    --accent-dim: rgba(240, 96, 60, 0.12);
+    --accent-hover: #f5815a;
+    --accent-glow: rgba(240, 96, 60, 0.4);
+    --win: #6ddb99;
+    --win-glow: rgba(109, 219, 153, 0.4);
+    --lose: #f0603c;
+    --lose-glow: rgba(240, 96, 60, 0.4);
+    --header-font: 'Bebas Neue', sans-serif;
+    --body-font: 'DM Sans', sans-serif;
+    --mono-font: 'JetBrains Mono', monospace;
+    --seg-thick: 9px;
+    --seg-len: 48px;
+    --seg-gap: 3px;
+  }
+
+  body.light {
+    --bg: #f5f1eb;
+    --surface: #ffffff;
+    --surface-2: #ede8e0;
+    --border: #d6d0c8;
+    --text: #1a1916;
+    --text-muted: #7a756e;
+    --accent: #c94020;
+    --accent-dim: rgba(201, 64, 32, 0.1);
+    --accent-hover: #a83318;
+    --accent-glow: rgba(201, 64, 32, 0.3);
+    --win: #1e7a4a;
+    --win-glow: rgba(30, 122, 74, 0.3);
+    --lose: #c94020;
+    --lose-glow: rgba(201, 64, 32, 0.3);
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: var(--body-font);
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 5rem 2rem 2rem;
+    font-weight: 300;
+    overflow-x: hidden;
+    user-select: none;
+    transition: background-color 0.3s ease, color 0.3s ease;
+  }
+
+  /* Noise overlay */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E");
+    opacity: 0.03;
+    pointer-events: none;
+    z-index: 9999;
+  }
+  body.light::before { opacity: 0.015; }
+
+  /* ─── Theme Toggle ─── */
+  .theme-toggle {
+    position: fixed;
+    top: 1.25rem; right: 1.25rem;
+    z-index: 1000;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    width: 2.5rem; height: 2.5rem;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s, border-color 0.2s, color 0.2s, transform 0.2s;
+  }
+  .theme-toggle:hover {
+    background: var(--accent-dim);
+    border-color: var(--accent);
+    color: var(--accent);
+    transform: rotate(20deg);
+  }
+
+  /* ─── Back Button ─── */
+  .back-btn {
+    position: fixed;
+    top: 1.25rem; left: 1.25rem;
+    z-index: 1000;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    padding: 0 1rem;
+    height: 2.5rem;
+    border-radius: 4px;
+    text-decoration: none;
+    font-family: var(--mono-font);
+    font-size: 0.65rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    transition: background 0.2s, border-color 0.2s, color 0.2s;
+  }
+  .back-btn::before { content: '←'; transition: transform 0.2s; }
+  .back-btn:hover {
+    background: var(--accent-dim);
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+  .back-btn:hover::before { transform: translateX(-3px); }
+
+  /* ─── Page Header ─── */
+  .page-header {
+    width: 100%;
+    max-width: 480px;
+    margin-bottom: 2rem;
+    padding-bottom: 1.5rem;
+    border-bottom: 1px solid var(--border);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .page-header::after {
+    content: 'BG';
+    position: absolute;
+    right: -0.5rem;
+    top: 50%;
+    transform: translateY(-50%);
+    font-family: var(--header-font);
+    font-size: 6rem;
+    color: transparent;
+    -webkit-text-stroke: 1px var(--border);
+    line-height: 1;
+    pointer-events: none;
+    user-select: none;
+  }
+
+  .section-label {
+    font-family: var(--mono-font);
+    font-size: 0.65rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 0.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+  .section-label::after {
+    content: '';
+    width: 3rem;
+    height: 1px;
+    background: var(--accent);
+    opacity: 0.5;
+  }
+
+  .page-header h1 {
+    font-family: var(--header-font);
+    font-size: clamp(2.5rem, 7vw, 3.5rem);
+    letter-spacing: 0.02em;
+    line-height: 1;
+    color: var(--text);
+  }
+
+  /* ─── Score Bar ─── */
+  .score-bar {
+    width: 100%;
+    max-width: 480px;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.5px;
+    background: var(--border);
+    border: 1.5px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+    margin-bottom: 1.5rem;
+  }
+
+  .score-item {
+    background: var(--surface);
+    padding: 1rem;
+    text-align: center;
+    transition: background-color 0.3s ease;
+  }
+
+  .slabel {
+    font-family: var(--mono-font);
+    font-size: 0.6rem;
+    letter-spacing: 0.15em;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    margin-bottom: 0.4rem;
+  }
+
+  .sval {
+    font-family: var(--header-font);
+    font-size: 2.2rem;
+    letter-spacing: 0.04em;
+    color: var(--text);
+    line-height: 1;
+    transition: color 0.2s;
+  }
+
+  .sval.streak { color: var(--accent); }
+
+  /* ─── Board Card ─── */
+  .board {
+    width: 100%;
+    max-width: 480px;
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    transition: background-color 0.3s ease, border-color 0.3s ease;
+  }
+
+  /* ─── Display Section ─── */
+  .display-section {
+    width: 100%;
+    padding: 2.5rem 2rem;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1.25rem;
+    position: relative;
+  }
+
+  .display-label {
+    font-family: var(--mono-font);
+    font-size: 0.6rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+  }
+
+  /* 7-segment display */
+  .seg-digit {
+    position: relative;
+    width: calc(var(--seg-len) + var(--seg-thick)*2 + var(--seg-gap)*2);
+    height: calc(var(--seg-len)*2 + var(--seg-thick)*3 + var(--seg-gap)*4);
+  }
+
+  .seg {
+    position: absolute;
+    background: var(--border);
+    border-radius: 2px;
+    transition: background 0.06s ease, box-shadow 0.06s ease;
+  }
+
+  .seg.on {
+    background: var(--accent);
+    box-shadow: 0 0 8px 2px var(--accent-glow);
+  }
+
+  .seg-h { width: var(--seg-len); height: var(--seg-thick); left: calc(var(--seg-thick) + var(--seg-gap)); }
+  .seg-a { top: 0; }
+  .seg-g { top: calc(var(--seg-len) + var(--seg-thick) + var(--seg-gap)*2); }
+  .seg-d { top: calc(var(--seg-len)*2 + var(--seg-thick)*2 + var(--seg-gap)*4); }
+  .seg-v { width: var(--seg-thick); height: var(--seg-len); }
+  .seg-f { left: 0; top: calc(var(--seg-thick) + var(--seg-gap)); }
+  .seg-b { right: 0; top: calc(var(--seg-thick) + var(--seg-gap)); }
+  .seg-e { left: 0; top: calc(var(--seg-len) + var(--seg-thick)*2 + var(--seg-gap)*3); }
+  .seg-c { right: 0; top: calc(var(--seg-len) + var(--seg-thick)*2 + var(--seg-gap)*3); }
+
+  /* Status message */
+  .status-msg {
+    font-family: var(--mono-font);
+    font-size: 0.65rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    height: 1rem;
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+  .status-msg.show { opacity: 1; }
+  .status-msg.win  { color: var(--win); }
+  .status-msg.lose { color: var(--lose); }
+
+  /* ─── LEDs Section ─── */
+  .leds-section {
+    width: 100%;
+    padding: 2rem;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  .leds-label {
+    font-family: var(--mono-font);
+    font-size: 0.6rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  .leds-label span {
+    display: flex;
+    gap: 3.5rem;
+    color: var(--text-muted);
+  }
+
+  .leds-row {
+    display: flex;
+    gap: 2rem;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .led-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .led-bit {
+    font-family: var(--mono-font);
+    font-size: 0.6rem;
+    letter-spacing: 0.1em;
+    color: var(--text-muted);
+  }
+
+  .led-bulb {
+    width: 3rem;
+    height: 3rem;
+    border-radius: 50%;
+    background: var(--surface-2);
+    border: 1.5px solid var(--border);
+    cursor: pointer;
+    transition: background 0.1s, box-shadow 0.1s, transform 0.08s, border-color 0.1s;
+    position: relative;
+  }
+
+  .led-bulb::after {
+    content: '';
+    position: absolute;
+    top: 18%; left: 18%;
+    width: 28%; height: 22%;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.12);
+    pointer-events: none;
+  }
+
+  .led-bulb.on {
+    background: var(--accent);
+    border-color: var(--accent-hover);
+    box-shadow: 0 0 12px 3px var(--accent-glow);
+  }
+
+  .led-bulb:hover { transform: scale(1.08); }
+  .led-bulb:active { transform: scale(0.93); }
+
+  /* ─── Confirm Button ─── */
+  .confirm-section {
+    width: 100%;
+    padding: 1.5rem 2rem;
+  }
+
+  .confirm-btn {
+    width: 100%;
+    padding: 0.9rem;
+    background: var(--accent);
+    border: none;
+    color: #ffffff;
+    font-family: var(--mono-font);
+    font-size: 0.7rem;
+    font-weight: 500;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    border-radius: 3px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    transition: background 0.2s, transform 0.1s;
+  }
+
+  .confirm-btn::after { content: '→'; transition: transform 0.2s; }
+  .confirm-btn:hover { background: var(--accent-hover); }
+  .confirm-btn:hover::after { transform: translateX(3px); }
+  .confirm-btn:active { transform: scale(0.98); }
+
+  .confirm-btn.win-flash  { animation: btn-win  0.4s ease; }
+  .confirm-btn.lose-flash { animation: btn-lose 0.4s ease; }
+
+  @keyframes btn-win  { 50% { box-shadow: 0 0 24px 6px var(--win-glow);  } }
+  @keyframes btn-lose { 50% { box-shadow: 0 0 24px 6px var(--lose-glow); } }
+
+  /* keyboard hint */
+  .kbd-hint {
+    text-align: center;
+    padding: 0.75rem 2rem 1.25rem;
+    font-family: var(--mono-font);
+    font-size: 0.55rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    border-top: 1px solid var(--border);
+    width: 100%;
+  }
+
+  kbd {
+    display: inline-block;
+    padding: 0.1rem 0.35rem;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    font-family: var(--mono-font);
+    font-size: 0.55rem;
+  }
+
+  /* win overlay flash */
+  .win-overlay {
+    position: fixed; inset: 0;
+    background: rgba(109, 219, 153, 0.05);
+    pointer-events: none;
+    opacity: 0;
+    z-index: 50;
+  }
+  .win-overlay.flash { animation: overlay-flash 0.4s ease forwards; }
+  @keyframes overlay-flash { 30%{ opacity: 1; } 100%{ opacity: 0; } }
+</style>
+</head>
+<body>
+
+  <div class="win-overlay" id="winOverlay"></div>
+
+  <a class="back-btn" href="index.html">Back</a>
+
+  <button class="theme-toggle" id="themeToggle" aria-label="Toggle light/dark mode">
+    <span class="theme-icon">☀</span>
+  </button>
+
+  <div class="page-header">
+    <div class="section-label">Game</div>
+    <h1>Binary Game</h1>
+  </div>
+
+  <div class="score-bar">
+    <div class="score-item">
+      <div class="slabel">Score</div>
+      <div class="sval" id="scoreVal">0</div>
+    </div>
+    <div class="score-item">
+      <div class="slabel">Streak</div>
+      <div class="sval streak" id="streakVal">0</div>
+    </div>
+    <div class="score-item">
+      <div class="slabel">Best</div>
+      <div class="sval" id="bestVal">0</div>
+    </div>
+  </div>
+
+  <div class="board">
+
+    <div class="display-section">
+      <div class="display-label">Convert this number</div>
+      <div class="seg-digit" id="segDigit">
+        <div class="seg seg-h seg-a" id="seg-a"></div>
+        <div class="seg seg-v seg-b" id="seg-b"></div>
+        <div class="seg seg-v seg-c" id="seg-c"></div>
+        <div class="seg seg-h seg-d" id="seg-d"></div>
+        <div class="seg seg-v seg-e" id="seg-e"></div>
+        <div class="seg seg-v seg-f" id="seg-f"></div>
+        <div class="seg seg-h seg-g" id="seg-g"></div>
+      </div>
+      <div class="status-msg" id="statusMsg"></div>
+    </div>
+
+    <div class="leds-section">
+      <div class="display-label">Set the binary answer</div>
+      <div class="leds-row">
+        <div class="led-wrap">
+          <div class="led-bit">4</div>
+          <div class="led-bulb" id="led-0" onclick="toggleLED(0)"></div>
+        </div>
+        <div class="led-wrap">
+          <div class="led-bit">2</div>
+          <div class="led-bulb" id="led-1" onclick="toggleLED(1)"></div>
+        </div>
+        <div class="led-wrap">
+          <div class="led-bit">1</div>
+          <div class="led-bulb" id="led-2" onclick="toggleLED(2)"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="confirm-section">
+      <button class="confirm-btn" id="confirmBtn" onclick="checkAnswer()">Confirm</button>
+    </div>
+
+    <div class="kbd-hint">
+      Keys: <kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd> toggle bits &nbsp;·&nbsp; <kbd>Enter</kbd> confirm
+    </div>
+
+  </div>
+
+  <script>
+    // ─── Theme Toggle ───
+    const btn = document.getElementById('themeToggle');
+    const icon = btn.querySelector('.theme-icon');
+
+    if (localStorage.getItem('theme') === 'light') {
+      document.body.classList.add('light');
+      icon.textContent = '☽';
+    }
+
+    btn.addEventListener('click', () => {
+      document.body.classList.toggle('light');
+      const isLight = document.body.classList.contains('light');
+      icon.textContent = isLight ? '☽' : '☀';
+      localStorage.setItem('theme', isLight ? 'light' : 'dark');
+    });
+
+    // ─── Game Logic ───
+    const PATTERNS = [
+      [1,1,1,1,1,1,0],
+      [0,1,1,0,0,0,0],
+      [1,1,0,1,1,0,1],
+      [1,1,1,1,0,0,1],
+      [0,1,1,0,0,1,1],
+      [1,0,1,1,0,1,1],
+      [1,0,1,1,1,1,1],
+      [1,1,1,0,0,0,0],
+    ];
+    const SEGS = ['a','b','c','d','e','f','g'];
+
+    let target = 0, ledState = [false,false,false];
+    let score = 0, streak = 0, best = 0, locked = false;
+
+    function displayDigit(d) {
+      if (d === 10 || d < 0 || d > 7) {
+        SEGS.forEach(s => document.getElementById('seg-'+s).classList.remove('on'));
+        return;
+      }
+      PATTERNS[d].forEach((v,i) => document.getElementById('seg-'+SEGS[i]).classList.toggle('on', !!v));
+    }
+
+    function flashDisplay(t, cb) {
+      let n = 0;
+      (function step() {
+        if (n >= 4) { displayDigit(t); cb && cb(); return; }
+        displayDigit(n % 2 === 0 ? 10 : t); n++;
+        setTimeout(step, 150);
+      })();
+    }
+
+    function toggleLED(i) {
+      if (locked) return;
+      ledState[i] = !ledState[i];
+      document.getElementById('led-'+i).classList.toggle('on', ledState[i]);
+    }
+
+    function resetLEDs() {
+      ledState = [false,false,false];
+      [0,1,2].forEach(i => document.getElementById('led-'+i).classList.remove('on'));
+    }
+
+    function updateScore() {
+      document.getElementById('scoreVal').textContent = score;
+      document.getElementById('streakVal').textContent = streak;
+      document.getElementById('bestVal').textContent = best;
+    }
+
+    let statusTO;
+    function showStatus(txt, type) {
+      const el = document.getElementById('statusMsg');
+      el.textContent = txt;
+      el.className = 'status-msg show ' + type;
+      clearTimeout(statusTO);
+      statusTO = setTimeout(() => el.classList.remove('show'), 1400);
+    }
+
+    function generateNewTarget() {
+      target = Math.floor(Math.random() * 8);
+      displayDigit(target);
+      resetLEDs();
+    }
+
+    function checkAnswer() {
+      if (locked) return;
+      const val = (ledState[0]?4:0) + (ledState[1]?2:0) + (ledState[2]?1:0);
+      const confirmBtn = document.getElementById('confirmBtn');
+      const ov = document.getElementById('winOverlay');
+
+      if (val === target) {
+        score++; streak++; if (streak > best) best = streak;
+        updateScore();
+        showStatus('Correct', 'win');
+        confirmBtn.classList.add('win-flash');
+        ov.classList.add('flash');
+        setTimeout(() => { confirmBtn.classList.remove('win-flash'); ov.classList.remove('flash'); }, 400);
+        locked = true;
+        displayDigit(10);
+        setTimeout(() => { locked = false; generateNewTarget(); }, 200);
+      } else {
+        streak = 0; updateScore();
+        showStatus('Wrong', 'lose');
+        confirmBtn.classList.add('lose-flash');
+        setTimeout(() => confirmBtn.classList.remove('lose-flash'), 500);
+        locked = true;
+        flashDisplay(target, () => { locked = false; });
+      }
+    }
+
+    document.addEventListener('keydown', e => {
+      if (e.key === '1') toggleLED(0);
+      else if (e.key === '2') toggleLED(1);
+      else if (e.key === '3') toggleLED(2);
+      else if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); checkAnswer(); }
+    });
+
+    generateNewTarget();
+    updateScore();
+  </script>
+</body>
+</html>

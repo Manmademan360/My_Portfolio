@@ -7,6 +7,11 @@
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
+
+  <button class="theme-toggle" id="themeToggle" aria-label="Toggle light/dark mode">
+    <span class="theme-icon">☀</span>
+  </button>
+
   <header>
     <h1>Yannick<br><span>Wierzbowski</span></h1>
     <p>Projects, games, and experiments — built and shared.</p>
@@ -48,7 +53,8 @@
       <div class="card">
         <div class="card-index">04 / Project</div>
         <h3>Arduino Binary Game</h3>
-        <p>A simple game built with an Arduino that teaches binary number systems.</p>
+        <p>A simple game built with an Arduino made after learning about binary systems.</p>
+        <a href="https://manmademan360.github.io/My_Portfolio/Games/binary_game.html" class="play-button">Play Game</a>
       </div>
     </div>
   </section>
@@ -64,5 +70,22 @@
   </footer>
 
   <script src="script.js"></script>
+  <script>
+    const btn = document.getElementById('themeToggle');
+    const icon = btn.querySelector('.theme-icon');
+
+    if (localStorage.getItem('theme') === 'light') {
+      document.body.classList.add('light');
+      icon.textContent = '☽';
+    }
+
+    btn.addEventListener('click', () => {
+      document.body.classList.toggle('light');
+      const isLight = document.body.classList.contains('light');
+      icon.textContent = isLight ? '☽' : '☀';
+      localStorage.setItem('theme', isLight ? 'light' : 'dark');
+    });
+  </script>
+
 </body>
 </html>

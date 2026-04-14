@@ -4,115 +4,247 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Base Converter</title>
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;600&family=Syne:wght@700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
   :root {
-    --bg: #f5f0e8;
-    --card: #faf7f2;
-    --ink: #1a1610;
-    --ink-mid: #6b6356;
-    --ink-light: #b8b0a4;
-    --rule: #ddd8ce;
-    --dec-accent: #c0392b;
-    --bin-accent: #1a5276;
-    --hex-accent: #1e7a4a;
-    --dec-bg: #fdf3f2;
-    --bin-bg: #f2f6fb;
-    --hex-bg: #f2fbf5;
-    --shadow: rgba(26,22,16,0.08);
+    --bg: #0a0a0a;
+    --surface: #111111;
+    --surface-2: #1a1a1a;
+    --border: #2a2a2a;
+    --text: #e8e4dc;
+    --text-muted: #6b6762;
+    --accent: #f0603c;
+    --accent-dim: rgba(240, 96, 60, 0.12);
+    --accent-hover: #f5815a;
+    --dec-accent: #f0603c;
+    --bin-accent: #7eb8f7;
+    --hex-accent: #6ddb99;
+    --header-font: 'Bebas Neue', sans-serif;
+    --body-font: 'DM Sans', sans-serif;
+    --mono-font: 'JetBrains Mono', monospace;
   }
 
-  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body.light {
+    --bg: #f5f1eb;
+    --surface: #ffffff;
+    --surface-2: #ede8e0;
+    --border: #d6d0c8;
+    --text: #1a1916;
+    --text-muted: #7a756e;
+    --accent: #c94020;
+    --accent-dim: rgba(201, 64, 32, 0.1);
+    --accent-hover: #a83318;
+    --dec-accent: #c94020;
+    --bin-accent: #1a5276;
+    --hex-accent: #1e7a4a;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html { scroll-behavior: smooth; }
 
   body {
+    font-family: var(--body-font);
     background: var(--bg);
-    font-family: 'IBM Plex Mono', monospace;
+    color: var(--text);
     min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+    font-weight: 300;
+    transition: background-color 0.3s ease, color 0.3s ease;
+  }
+
+  /* Noise overlay */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E");
+    opacity: 0.03;
+    pointer-events: none;
+    z-index: 9999;
+  }
+
+  body.light::before { opacity: 0.015; }
+
+  /* ─── Theme Toggle ─── */
+  .theme-toggle {
+    position: fixed;
+    top: 1.25rem;
+    right: 1.25rem;
+    z-index: 1000;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    width: 2.5rem;
+    height: 2.5rem;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 1rem;
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 24px;
-    background-image:
-      radial-gradient(circle at 15% 85%, rgba(192,57,43,0.04) 0%, transparent 45%),
-      radial-gradient(circle at 85% 15%, rgba(26,82,118,0.05) 0%, transparent 45%),
-      radial-gradient(circle at 50% 50%, rgba(30,122,74,0.03) 0%, transparent 60%);
+    transition: background 0.2s, border-color 0.2s, color 0.2s, transform 0.2s;
   }
 
+  .theme-toggle:hover {
+    background: var(--accent-dim);
+    border-color: var(--accent);
+    color: var(--accent);
+    transform: rotate(20deg);
+  }
+
+  /* ─── Back Button ─── */
+  .back-btn {
+    position: fixed;
+    top: 1.25rem;
+    left: 1.25rem;
+    z-index: 1000;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    padding: 0 1rem;
+    height: 2.5rem;
+    border-radius: 4px;
+    text-decoration: none;
+    font-family: var(--mono-font);
+    font-size: 0.65rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    transition: background 0.2s, border-color 0.2s, color 0.2s;
+  }
+
+  .back-btn::before {
+    content: '←';
+    transition: transform 0.2s;
+  }
+
+  .back-btn:hover {
+    background: var(--accent-dim);
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  .back-btn:hover::before {
+    transform: translateX(-3px);
+  }
+
+  /* ─── Card ─── */
   .card {
     width: 100%;
-    max-width: 460px;
-    background: var(--card);
-    border-radius: 2px;
-    box-shadow:
-      0 2px 4px var(--shadow),
-      0 8px 32px var(--shadow),
-      0 0 0 1px var(--rule);
+    max-width: 500px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
     overflow: hidden;
+    transition: background-color 0.3s ease, border-color 0.3s ease;
   }
 
   .card-header {
-    padding: 22px 28px 18px;
-    border-bottom: 1px solid var(--rule);
-    display: flex;
-    align-items: baseline;
-    gap: 12px;
+    padding: 2rem 2rem 1.5rem;
+    border-bottom: 1px solid var(--border);
+    position: relative;
+    overflow: hidden;
   }
 
-  .card-header h1 {
-    font-family: 'Syne', sans-serif;
-    font-size: 18px;
-    font-weight: 800;
-    color: var(--ink);
+  /* Watermark */
+  .card-header::after {
+    content: 'BC';
+    position: absolute;
+    right: -0.5rem;
+    top: 50%;
+    transform: translateY(-50%);
+    font-family: var(--header-font);
+    font-size: 7rem;
+    color: transparent;
+    -webkit-text-stroke: 1px var(--border);
+    line-height: 1;
+    pointer-events: none;
+    user-select: none;
     letter-spacing: -0.02em;
   }
 
-  .card-header .bases {
-    font-size: 10px;
-    color: var(--ink-light);
+  .section-label {
+    font-family: var(--mono-font);
+    font-size: 0.65rem;
     letter-spacing: 0.2em;
     text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 0.6rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
   }
 
+  .section-label::after {
+    content: '';
+    width: 3rem;
+    height: 1px;
+    background: var(--accent);
+    opacity: 0.5;
+  }
+
+  .card-header h1 {
+    font-family: var(--header-font);
+    font-size: clamp(2rem, 6vw, 3rem);
+    letter-spacing: 0.02em;
+    line-height: 1;
+    color: var(--text);
+  }
+
+  /* ─── Fields ─── */
   .fields {
-    padding: 20px 28px 24px;
-    display: flex;
-    flex-direction: column;
-    gap: 0;
+    padding: 0;
   }
 
   .field {
     position: relative;
+    border-bottom: 1px solid var(--border);
+    transition: background-color 0.2s;
   }
 
-  .field + .field {
-    border-top: 1px solid var(--rule);
+  .field:last-child {
+    border-bottom: none;
   }
+
+  .field::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0;
+    width: 3px;
+    height: 0;
+    transition: height 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .field.dec::before { background: var(--dec-accent); }
+  .field.bin::before { background: var(--bin-accent); }
+  .field.hex::before { background: var(--hex-accent); }
+
+  .field.active-field::before { height: 100%; }
 
   .field-inner {
     display: flex;
     align-items: stretch;
-    gap: 0;
-    transition: background 0.15s;
-    border-radius: 1px;
-  }
-
-  .field-inner:focus-within {
-    background: white;
-    box-shadow: 0 1px 0 currentColor;
   }
 
   .field-tag {
-    width: 42px;
-    min-width: 42px;
+    width: 3.5rem;
+    min-width: 3.5rem;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-family: 'Syne', sans-serif;
-    font-size: 10px;
-    font-weight: 700;
+    font-family: var(--mono-font);
+    font-size: 0.6rem;
+    font-weight: 500;
     letter-spacing: 0.15em;
-    padding: 16px 0 14px;
-    border-right: 1px solid var(--rule);
+    border-right: 1px solid var(--border);
+    transition: border-color 0.3s ease;
   }
 
   .field.dec .field-tag { color: var(--dec-accent); }
@@ -123,8 +255,7 @@
     flex: 1;
     display: flex;
     align-items: center;
-    padding: 0 14px;
-    position: relative;
+    padding: 0 1rem;
   }
 
   input {
@@ -132,128 +263,96 @@
     background: transparent;
     border: none;
     outline: none;
-    font-family: 'IBM Plex Mono', monospace;
-    font-size: 16px;
+    font-family: var(--mono-font);
+    font-size: 1rem;
     font-weight: 400;
-    color: var(--ink);
-    padding: 16px 0 14px;
+    color: var(--text);
+    padding: 1.1rem 0;
     letter-spacing: 0.04em;
+    transition: color 0.3s ease;
   }
 
   input::placeholder {
-    color: var(--ink-light);
-    font-weight: 300;
+    color: var(--text-muted);
+    font-weight: 400;
+    opacity: 0.5;
   }
 
   .field.dec input { caret-color: var(--dec-accent); }
-  .field.bin input { caret-color: var(--bin-accent); letter-spacing: 0.12em; }
+  .field.bin input { caret-color: var(--bin-accent); letter-spacing: 0.1em; }
   .field.hex input { caret-color: var(--hex-accent); text-transform: uppercase; }
 
   .field-clear {
     background: none;
     border: none;
     cursor: pointer;
-    padding: 0 4px;
-    color: var(--ink-light);
-    font-size: 14px;
+    padding: 0 0.25rem;
+    color: var(--text-muted);
+    font-size: 1rem;
     line-height: 1;
     opacity: 0;
     transition: opacity 0.15s, color 0.15s;
-    font-family: 'IBM Plex Mono', monospace;
+    font-family: var(--mono-font);
   }
 
-  .field-clear:hover { color: var(--ink); }
+  .field-clear:hover { color: var(--text); }
+
   .field-input-wrap:focus-within .field-clear,
-  input:not(:placeholder-shown) ~ .field-clear {
-    opacity: 1;
-  }
+  input:not(:placeholder-shown) ~ .field-clear { opacity: 1; }
 
-  .field.error input {
-    color: #c0392b;
-  }
+  .field.error input { color: var(--dec-accent); }
 
   .error-msg {
-    font-size: 9px;
+    font-family: var(--mono-font);
+    font-size: 0.6rem;
     letter-spacing: 0.12em;
     text-transform: uppercase;
-    color: #c0392b;
-    padding: 0 14px 10px 56px;
+    color: var(--dec-accent);
+    padding: 0 1rem 0.75rem 4.5rem;
     display: none;
   }
 
   .field.error .error-msg { display: block; }
 
-  /* Arrow connectors */
-  .arrow {
-    display: flex;
-    align-items: center;
-    padding: 0 0 0 48px;
-    height: 0;
-    overflow: visible;
-    position: relative;
-    z-index: 2;
-  }
-
-  .arrow-line {
-    width: 24px;
-    height: 1px;
-    background: var(--ink-light);
-    position: relative;
-  }
-
-  /* Bottom row */
+  /* ─── Footer ─── */
   .card-footer {
-    padding: 14px 28px 18px;
-    border-top: 1px solid var(--rule);
+    padding: 1rem 1.5rem;
+    border-top: 1px solid var(--border);
     display: flex;
     align-items: center;
     justify-content: space-between;
+    transition: border-color 0.3s ease;
   }
 
   .hint {
-    font-size: 9px;
-    color: var(--ink-light);
+    font-family: var(--mono-font);
+    font-size: 0.6rem;
+    color: var(--text-muted);
     letter-spacing: 0.1em;
     text-transform: uppercase;
   }
 
   .clear-all {
     background: none;
-    border: 1px solid var(--rule);
-    border-radius: 2px;
-    padding: 6px 14px;
-    font-family: 'IBM Plex Mono', monospace;
-    font-size: 9px;
-    letter-spacing: 0.2em;
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    padding: 0.4rem 0.9rem;
+    font-family: var(--mono-font);
+    font-size: 0.6rem;
+    letter-spacing: 0.15em;
     text-transform: uppercase;
-    color: var(--ink-mid);
+    color: var(--text-muted);
     cursor: pointer;
-    transition: all 0.15s;
+    transition: border-color 0.2s, color 0.2s, background 0.2s;
   }
 
   .clear-all:hover {
-    border-color: var(--ink-mid);
-    color: var(--ink);
+    border-color: var(--accent);
+    color: var(--accent);
+    background: var(--accent-dim);
   }
 
-  /* Active field highlight strip */
-  .field.active-field::before {
-    content: '';
-    position: absolute;
-    left: 0; top: 0; bottom: 0;
-    width: 2px;
-  }
-
-  .field.dec.active-field::before { background: var(--dec-accent); }
-  .field.bin.active-field::before { background: var(--bin-accent); }
-  .field.hex.active-field::before { background: var(--hex-accent); }
-
-  /* Filled field subtle bg */
-  .field.filled.dec .field-inner { background: var(--dec-bg); }
-  .field.filled.bin .field-inner { background: var(--bin-bg); }
-  .field.filled.hex .field-inner { background: var(--hex-bg); }
-
-  /* Cascade animation on conversion */
+  /* ─── Flash animation ─── */
   @keyframes flash-in {
     0% { opacity: 0.3; transform: translateX(-4px); }
     100% { opacity: 1; transform: translateX(0); }
@@ -266,181 +365,179 @@
 </head>
 <body>
 
-<div class="card">
-  <div class="card-header">
-    <h1>Base Converter</h1>
-    <span class="bases">DEC · BIN · HEX</span>
-  </div>
+  <a class="back-btn" href="https://manmademan360.github.io/My_Portfolio/">Back</a>
 
-  <div class="fields">
+  <button class="theme-toggle" id="themeToggle" aria-label="Toggle light/dark mode">
+    <span class="theme-icon">☀</span>
+  </button>
 
-    <!-- DECIMAL -->
-    <div class="field dec" id="field-dec">
-      <div class="field-inner">
-        <div class="field-tag">DEC</div>
-        <div class="field-input-wrap">
-          <input id="dec" type="text" inputmode="numeric" placeholder="0–4294967295" autocomplete="off" spellcheck="false">
-          <button class="field-clear" onclick="clearField('dec')" tabindex="-1">×</button>
-        </div>
-      </div>
-      <div class="error-msg" id="err-dec">integers only</div>
+  <div class="card">
+    <div class="card-header">
+      <div class="section-label">Tool</div>
+      <h1>Base Converter</h1>
     </div>
 
-    <!-- BINARY -->
-    <div class="field bin" id="field-bin">
-      <div class="field-inner">
-        <div class="field-tag">BIN</div>
-        <div class="field-input-wrap">
-          <input id="bin" type="text" inputmode="text" placeholder="0s and 1s" autocomplete="off" spellcheck="false">
-          <button class="field-clear" onclick="clearField('bin')" tabindex="-1">×</button>
+    <div class="fields">
+
+      <div class="field dec" id="field-dec">
+        <div class="field-inner">
+          <div class="field-tag">DEC</div>
+          <div class="field-input-wrap">
+            <input id="dec" type="text" inputmode="numeric" placeholder="Decimal" autocomplete="off" spellcheck="false">
+            <button class="field-clear" onclick="clearField('dec')" tabindex="-1">×</button>
+          </div>
         </div>
+        <div class="error-msg" id="err-dec">integers only</div>
       </div>
-      <div class="error-msg" id="err-bin">binary digits only</div>
+
+      <div class="field bin" id="field-bin">
+        <div class="field-inner">
+          <div class="field-tag">BIN</div>
+          <div class="field-input-wrap">
+            <input id="bin" type="text" inputmode="text" placeholder="Binary" autocomplete="off" spellcheck="false">
+            <button class="field-clear" onclick="clearField('bin')" tabindex="-1">×</button>
+          </div>
+        </div>
+        <div class="error-msg" id="err-bin">binary digits only</div>
+      </div>
+
+      <div class="field hex" id="field-hex">
+        <div class="field-inner">
+          <div class="field-tag">HEX</div>
+          <div class="field-input-wrap">
+            <input id="hex" type="text" inputmode="text" placeholder="Hexadecimal" autocomplete="off" spellcheck="false">
+            <button class="field-clear" onclick="clearField('hex')" tabindex="-1">×</button>
+          </div>
+        </div>
+        <div class="error-msg" id="err-hex">hex digits only (0–9, A–F)</div>
+      </div>
+
     </div>
 
-    <!-- HEX -->
-    <div class="field hex" id="field-hex">
-      <div class="field-inner">
-        <div class="field-tag">HEX</div>
-        <div class="field-input-wrap">
-          <input id="hex" type="text" inputmode="text" placeholder="0–9, A–F" autocomplete="off" spellcheck="false">
-          <button class="field-clear" onclick="clearField('hex')" tabindex="-1">×</button>
-        </div>
-      </div>
-      <div class="error-msg" id="err-hex">hex digits only (0–9, A–F)</div>
+    <div class="card-footer">
+      <span class="hint">Type in any field</span>
+      <button class="clear-all" onclick="clearAll()">Clear all</button>
     </div>
-
   </div>
 
-  <div class="card-footer">
-    <span class="hint">type in any field</span>
-    <button class="clear-all" onclick="clearAll()">Clear all</button>
-  </div>
-</div>
+  <script>
+    // ─── Theme Toggle ───
+    const btn = document.getElementById('themeToggle');
+    const icon = btn.querySelector('.theme-icon');
 
-<script>
-  const decEl = document.getElementById('dec');
-  const binEl = document.getElementById('bin');
-  const hexEl = document.getElementById('hex');
+    if (localStorage.getItem('theme') === 'light') {
+      document.body.classList.add('light');
+      icon.textContent = '☽';
+    }
 
-  const fields = {
-    dec: { input: decEl, field: document.getElementById('field-dec'), err: document.getElementById('err-dec') },
-    bin: { input: binEl, field: document.getElementById('field-bin'), err: document.getElementById('err-bin') },
-    hex: { input: hexEl, field: document.getElementById('field-hex'), err: document.getElementById('err-hex') },
-  };
+    btn.addEventListener('click', () => {
+      document.body.classList.toggle('light');
+      const isLight = document.body.classList.contains('light');
+      icon.textContent = isLight ? '☽' : '☀';
+      localStorage.setItem('theme', isLight ? 'light' : 'dark');
+    });
 
-  let activeSource = null;
+    // ─── Converter Logic ───
+    const fields = {
+      dec: { input: document.getElementById('dec'), field: document.getElementById('field-dec'), err: document.getElementById('err-dec') },
+      bin: { input: document.getElementById('bin'), field: document.getElementById('field-bin'), err: document.getElementById('err-bin') },
+      hex: { input: document.getElementById('hex'), field: document.getElementById('field-hex'), err: document.getElementById('err-hex') },
+    };
 
-  function animateIn(el) {
-    el.classList.remove('updated');
-    void el.offsetWidth; // reflow
-    el.classList.add('updated');
-  }
+    function animateIn(el) {
+      el.classList.remove('updated');
+      void el.offsetWidth;
+      el.classList.add('updated');
+    }
 
-  function setError(name, hasError) {
-    const f = fields[name];
-    f.field.classList.toggle('error', hasError);
-  }
+    function setError(name, hasError) {
+      fields[name].field.classList.toggle('error', hasError);
+    }
 
-  function updateFilledState(name) {
-    const f = fields[name];
-    f.field.classList.toggle('filled', f.input.value.length > 0);
-  }
+    function updateFilledState(name) {
+      fields[name].field.classList.toggle('filled', fields[name].input.value.length > 0);
+    }
 
-  function convert(source, value) {
-    // Clear errors on all
-    Object.keys(fields).forEach(k => setError(k, false));
+    function convert(source, value) {
+      Object.keys(fields).forEach(k => setError(k, false));
 
-    if (!value || value === '') {
-      // Clear others
+      if (!value || value === '') {
+        Object.keys(fields).forEach(k => {
+          if (k !== source) { fields[k].input.value = ''; updateFilledState(k); }
+        });
+        return;
+      }
+
+      let num;
+      if (source === 'dec') {
+        if (!/^\d+$/.test(value)) { setError('dec', true); return; }
+        num = parseInt(value, 10);
+      } else if (source === 'bin') {
+        if (!/^[01]+$/.test(value)) { setError('bin', true); return; }
+        num = parseInt(value, 2);
+      } else if (source === 'hex') {
+        if (!/^[0-9a-fA-F]+$/.test(value)) { setError('hex', true); return; }
+        num = parseInt(value, 16);
+      }
+
+      if (isNaN(num) || num < 0 || num > 4294967295) {
+        setError(source, true);
+        Object.keys(fields).forEach(k => {
+          if (k !== source) { fields[k].input.value = ''; updateFilledState(k); }
+        });
+        return;
+      }
+
+      const results = { dec: num.toString(10), bin: num.toString(2), hex: num.toString(16).toUpperCase() };
       Object.keys(fields).forEach(k => {
         if (k !== source) {
-          fields[k].input.value = '';
+          fields[k].input.value = results[k];
+          animateIn(fields[k].input);
           updateFilledState(k);
         }
       });
-      return;
     }
 
-    let num;
+    Object.keys(fields).forEach(name => {
+      const { input, field } = fields[name];
 
-    if (source === 'dec') {
-      if (!/^\d+$/.test(value)) { setError('dec', true); return; }
-      num = parseInt(value, 10);
-    } else if (source === 'bin') {
-      if (!/^[01]+$/.test(value)) { setError('bin', true); return; }
-      num = parseInt(value, 2);
-    } else if (source === 'hex') {
-      if (!/^[0-9a-fA-F]+$/.test(value)) { setError('hex', true); return; }
-      num = parseInt(value, 16);
-    }
-
-    if (isNaN(num) || num < 0 || num > 4294967295) {
-      setError(source, true);
-      Object.keys(fields).forEach(k => {
-        if (k !== source) { fields[k].input.value = ''; updateFilledState(k); }
+      input.addEventListener('focus', () => {
+        Object.keys(fields).forEach(k => fields[k].field.classList.toggle('active-field', k === name));
       });
-      return;
-    }
 
-    const results = {
-      dec: num.toString(10),
-      bin: num.toString(2),
-      hex: num.toString(16).toUpperCase(),
-    };
+      input.addEventListener('blur', () => {
+        field.classList.remove('active-field');
+      });
 
-    Object.keys(fields).forEach(k => {
-      if (k !== source) {
-        fields[k].input.value = results[k];
-        animateIn(fields[k].input);
-        updateFilledState(k);
+      input.addEventListener('input', () => {
+        updateFilledState(name);
+        convert(name, input.value.trim());
+      });
+
+      if (name === 'hex') {
+        input.addEventListener('input', () => {
+          const pos = input.selectionStart;
+          input.value = input.value.toUpperCase();
+          input.setSelectionRange(pos, pos);
+        });
       }
     });
-  }
 
-  // Wire up events
-  Object.keys(fields).forEach(name => {
-    const { input, field } = fields[name];
-
-    input.addEventListener('focus', () => {
-      activeSource = name;
-      Object.keys(fields).forEach(k => fields[k].field.classList.toggle('active-field', k === name));
-    });
-
-    input.addEventListener('blur', () => {
-      field.classList.remove('active-field');
-    });
-
-    input.addEventListener('input', () => {
+    function clearField(name) {
+      fields[name].input.value = '';
+      setError(name, false);
       updateFilledState(name);
-      convert(name, input.value.trim());
-    });
+      convert(name, '');
+      fields[name].input.focus();
+    }
 
-    // Force uppercase on hex as you type
-    if (name === 'hex') {
-      input.addEventListener('input', () => {
-        const pos = input.selectionStart;
-        input.value = input.value.toUpperCase();
-        input.setSelectionRange(pos, pos);
+    function clearAll() {
+      Object.keys(fields).forEach(k => {
+        fields[k].input.value = '';
+        setError(k, false);
+        updateFilledState(k);
       });
     }
-  });
-
-  function clearField(name) {
-    fields[name].input.value = '';
-    setError(name, false);
-    updateFilledState(name);
-    convert(name, '');
-    fields[name].input.focus();
-  }
-
-  function clearAll() {
-    Object.keys(fields).forEach(k => {
-      fields[k].input.value = '';
-      setError(k, false);
-      updateFilledState(k);
-    });
-  }
-</script>
+  </script>
 </body>
 </html>
